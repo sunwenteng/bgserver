@@ -1,0 +1,14 @@
+# directory
+.idea/
+node_modules/
+dist/
+tool/crawler/data
+tool/crawler/raw
+src/config/data/*.json
+src/config/data/.svn
+archive/
+
+# files
+src/config/config.development.json
+log
+.pid

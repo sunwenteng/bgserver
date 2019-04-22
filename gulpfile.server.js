@@ -10,15 +10,13 @@ let protoFiles = [
     path.resolve('./src/app/proto/router.proto'),
 ];
 
-let pbjs = path.resolve('./node_modules/.bin/pbjs'),
-    pbts = path.resolve('./node_modules/.bin/pbts'),
-    cmdJsFile = path.resolve('./src/app/proto/cmd.js'),
+let cmdJsFile = path.resolve('./src/app/proto/cmd.js'),
     cmdTsFile = path.resolve('./src/app/proto/cmd.d.ts');
 
 
 gulp.task('proto2js', (cb) => {
-    exec(pbjs + ' -t static-module -w commonjs -o ' + cmdJsFile + ' ' + protoFiles.join(' ') + ' && ' +
-        pbts + ' --no-comments -o ' + cmdTsFile + ' ' + cmdJsFile, (error) => {
+    exec('npx pbjs -t static-module -w commonjs -o ' + cmdJsFile + ' ' + protoFiles.join(' ') + ' && ' +
+        'npx pbts --no-comments -o ' + cmdTsFile + ' ' + cmdJsFile, (error) => {
         if (error) {
             console.error(error);
         }
