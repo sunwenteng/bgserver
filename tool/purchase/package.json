@@ -1,0 +1,46 @@
+{
+  "name": "bingo",
+  "author": {
+    "name": "sunwenteng"
+  },
+  "main": "purchase.js",
+  "homepage": "https://github.com/sunwenteng/bingo",
+  "version": "0.0.1",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/sunwenteng/bingo/LICENSE.txt"
+    }
+  ],
+  "description": "bingo is a server based on node, redis and mysql",
+  "keywords": [
+    "node",
+    "mysql"
+  ],
+  "bugs": {
+    "url": "https://github.com/sunwenteng/bingo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sunwenteng/bingo/bingo.git"
+  },
+  "preferGlobal": true,
+  "bin": {},
+  "engines": {
+    "node": ">=8.11.1 <8.11.2"
+  },
+  "dependencies": {
+    "mysql": "^2.15.0"
+  },
+  "devDependencies": {
+  },
+  "scripts": {},
+  "maintainers": [
+    {
+      "username": "sunwenteng",
+      "email": "elvessun@gmail.com"
+    }
+  ],
+  "directories": {},
+  "readme": "README.md"
+}

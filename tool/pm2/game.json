@@ -1,0 +1,22 @@
+{
+  "apps": [
+    {
+      "name": "game",
+      "script": "game_app",
+      "instances": 1,
+      "instance_var": "INSTANCE_ID",
+      "exec_mode": "cluster",
+      "cwd": "../../app/game",
+      "args": [],
+      "node_args": "--harmony",
+      "merge_logs": false,
+      "autorestart": false,
+      "wait-ready": true,
+      "listen-timeout": 60000,
+      "max_memory_restart": "2048M",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  ]
+}

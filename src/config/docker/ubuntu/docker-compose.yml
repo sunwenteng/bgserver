@@ -1,0 +1,59 @@
+# cd 到这个目录 创建image
+# docker build -t ubuntu-dev .
+# 启动构建好的镜像绑定固定ip
+# docker run -itd --name ubuntu-dev --network bridge --ip 172.17.1.83 ubuntu-dev:latest /bin/bash
+# 创建网桥、容器等初始信息
+# docker-compose build
+# 启动容器
+# docker-compose up -d
+# 查看下启动的容器
+# docker ps
+# 进入相关容器查看
+# docker exec [containerId] -it bash
+# 改名 并提交到docker
+# docker tag [imageName] sunwenteng/[imageName]
+# docker push [imageName]
+# docker network create -d macvlan  --subnet=172.16.1.0/24 --gateway=172.16.1.1 -o parent=eth0 gitlab-net
+# route add -p 172.16.0.0 MASK 255.255.0.0 10.0.75.2
+
+version: "2.4"
+
+services:
+  work:
+    container_name: work
+    hostname: "work"
+    user: work
+    build: .
+    working_dir: /home/work/workspace
+    volumes:
+      # 把当前目录(源代码目录) mount 到 docker container 的特定目录，那个目录就是 docker 环境里面进行编译的工作区间
+      - .:/home/work/workspace
+    # 需要改变 security_opt， 不然 gdb server 会跑不起来
+    security_opt:
+      - seccomp:unconfined
+    # ports:
+    #   - "50001:22"
+    #   - "3632:3632"
+    #   - "5555:5555"
+    #   - "7777:7777"
+    #   开启 ssh 服务，这样 clion 就能通过 ssh 连接进来了
+    #   同时通过 tailf 命令保持 container 不要退出的状态
+    command:
+      bash -c "sudo service ssh restart && tail -f /dev/null"
+    network_mode: host
+      # networks:
+      #   work:
+      #     ipv4_address: 172.16.1.83
+      # networks:
+      #   -work:
+
+      # 手动配置网络，这样就有固定的 ip 了 有问题
+      # networks:
+      #   work:
+      #     driver: bridge
+      #     ipam:
+      #       driver: default
+      #       config:
+      #         # 标识子网掩码是 255.255.255.0，如果是/16则标识为 255.255.0.0
+      #         - subnet: 172.16.2.0/24
+    #- gateway: 172.16.1.1

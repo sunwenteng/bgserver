@@ -1,0 +1,103 @@
+syntax = "proto3";
+package C2S;
+
+/** remember to put your message here as a kind support**/
+message Message {
+    oneof kind {
+        LOGIN_CS_LOGIN LOGIN_CS_LOGIN = 1001;
+        LOGIN_CS_CHOOSE_SERVER LOGIN_CS_CHOOSE_SERVER = 1002;
+        LOGIN_CS_GET_SERVER_LIST LOGIN_CS_GET_SERVER_LIST = 1003;
+        LOGIN_CS_GET_INFO LOGIN_CS_GET_INFO = 1004;
+        LOGIN_CS_QUERY LOGIN_CS_QUERY = 1005;
+
+        CS_TEST_ECHO CS_TEST_ECHO = 1;
+        CS_ROLE_ONLINE CS_ROLE_ONLINE = 2001;
+        CS_ROLE_HEART_BEAT CS_ROLE_HEART_BEAT = 2002;
+        CS_ROLE_CREATE CS_ROLE_CREATE = 2003;
+        CS_GM_CMD CS_GM_CMD = 2004;
+        CS_ROLE_CHAT CS_ROLE_CHAT = 2005;
+    }
+}
+
+/** you must name the message in the following format: [PACKAGE_NAME]_[CONTROLLER_NAME]_[METHOD_NAME]**/
+message CS_TEST_ECHO {
+    enum Color {
+        option allow_alias = true;
+        RED = 0;
+        BLUE = 1;
+        YELLOW = 1;
+    }
+    string name = 1;
+    string msg = 2;
+    int64 b = 3;
+    repeated int32 data = 4;
+    Color color = 5;
+    map<uint64, string> map = 6;
+}
+
+message CS_ROLE_HEART_BEAT {
+    string msg = 1;
+}
+
+message CS_ROLE_ONLINE {
+    string token = 1;
+    uint32 uid = 2;
+    string device = 3;
+    string deviceType = 4;
+    uint32 inviter = 5;
+}
+
+message LOGIN_CS_LOGIN {
+    string passport = 1;
+    string pwd = 2;
+    string device = 3;
+    string device_uid = 4;
+    string device_type = 5;
+    string device_token = 6;
+    uint32 platform = 7;
+}
+
+message LOGIN_CS_CHOOSE_SERVER {
+    uint32 server_id = 1;
+}
+
+message LOGIN_CS_GET_SERVER_LIST {
+}
+
+message LOGIN_CS_GET_INFO {
+    uint32 platform_id = 1;
+    string client_version = 2;
+}
+
+message LOGIN_CS_QUERY {
+    uint32 uid = 1;
+}
+
+message CS_ROLE_CREATE {
+    string name = 1;
+    uint32 uid = 2;
+    uint32 iconId = 3;
+    uint32 gender = 4;
+    uint32 inviter = 5;
+}
+
+message CS_GM_CMD {
+    string msg = 1;
+}
+
+enum ERankType {
+    combat = 0;
+}
+
+message CS_ROLE_CHAT {
+    enum EChatChannel {
+        none = 0;
+        server = 1;
+        guild = 2;
+        game = 3;
+        broadcast = 100;
+    }
+
+    string msg = 1;
+    EChatChannel channel = 2;
+}

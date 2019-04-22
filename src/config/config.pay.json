@@ -1,0 +1,33 @@
+{
+  "log": {
+    "dir": "./log",
+    "level": "debug"
+  },
+  "mysql": {
+    "login_db": {
+      "name": "login_db",
+      "host": "172.16.1.83",
+      "port": 3306,
+      "user": "root",
+      "password": "root",
+      "database": "bingo_login",
+      "connectionLimit": 1,
+      "charset": "UTF8",
+      "supportBigNumbers": true,
+      "waitForConnections": true
+    }
+  },
+  "app": {
+    "pay": {
+      "ip": "0.0.0.0",
+      "local_ip": "172.16.1.83",
+      "port": 8888,
+      "channels": {
+        "jianwan": {
+          "md5key": "123123"
+        },
+        "wanpi": {}
+      }
+    }
+  }
+}

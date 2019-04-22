@@ -1,0 +1,58 @@
+{
+  "log": {
+    "dir": "./log",
+    "level": "debug"
+  },
+  "mysql": {
+    "game_db": {
+      "name": "game_db",
+      "host": "172.16.1.83",
+      "port": 3306,
+      "user": "root",
+      "password": "root",
+      "database": "bingo_world",
+      "connectionLimit": 1,
+      "charset": "UTF8",
+      "supportBigNumbers": true,
+      "waitForConnections": true,
+      "tableSplitCount": 10
+    },
+    "login_db": {
+      "name": "login_db",
+      "host": "172.16.1.83",
+      "port": 3306,
+      "user": "root",
+      "password": "root",
+      "database": "bingo_login",
+      "connectionLimit": 1,
+      "charset": "UTF8",
+      "supportBigNumbers": true,
+      "waitForConnections": true
+    }
+  },
+  "redis": {
+    "gameRedis": {
+      "name": "gameRedis",
+      "port": 6379,
+      "host": "172.16.1.83",
+      "options": {
+        "connect_timeout": 36000000,
+        "password": "redis@ime"
+      }
+    }
+  },
+  "app": {
+    "game": {
+      "groupId": 0,
+      "instanceId": 0,
+      "proxy_ip": "172.16.1.83",
+      "proxy_port": 5555,
+      "ip": "0.0.0.0",
+      "local_ip": "172.16.1.83",
+      "port": 5555,
+      "config": "./data/",
+      "version": "1.0.0",
+      "sessionPacketMaxLength": 10000
+    }
+  }
+}

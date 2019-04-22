@@ -1,0 +1,242 @@
+syntax = "proto3";
+package S2C;
+
+/** remember to put your message here as a kind support**/
+message Message {
+    oneof kind {
+        SC_TEST_ECHO SC_TEST_ECHO = 1;
+        Error Error = 2;
+        LOGIN_SC_LOGIN LOGIN_SC_LOGIN = 1001;
+        LOGIN_SC_CHOOSE_SERVER LOGIN_SC_CHOOSE_SERVER = 1002;
+        LOGIN_SC_GET_SERVER_LIST LOGIN_SC_GET_SERVER_LIST = 1003;
+        LOGIN_SC_GET_INFO LOGIN_SC_GET_INFO = 1004;
+        LOGIN_SC_QUERY LOGIN_SC_QUERY = 1005;
+
+        SC_ROLE_CREATE SC_ROLE_CREATE = 2001;
+        SC_ROLE_ONLINE SC_ROLE_ONLINE = 2002;
+        SC_ROLE_HEART_BEAT SC_ROLE_HEART_BEAT = 2003;
+        SC_UPDATE_ROLE_PRO SC_UPDATE_ROLE_PRO = 2004;
+        SC_GET_REWARD SC_GET_REWARD = 2005;
+        SC_GM_CMD SC_GM_CMD = 2006;
+        SC_UPDATE_RECHARGE SC_UPDATE_RECHARGE = 2007;
+        SC_ROLE_OFFLINE SC_ROLE_OFFLINE = 2008;
+        // pls add below
+    }
+}
+
+message Error {
+    int32 id = 1;
+    string msg = 2;
+}
+
+message SC_ROLE_DETAIL {
+    RoleSummary summary = 1;
+}
+
+message Reward {
+    uint32 type = 1;
+    uint32 id = 2;
+    int64 value = 3;
+}
+
+message SC_GET_REWARD {
+    repeated Reward reward = 1;
+}
+
+message RoleSummary {
+    uint32 uid = 1;
+    string nickname = 2;
+    string headimgurl = 3;
+    uint32 gender = 4;
+    uint32 iconId = 5;
+    uint32 level = 6;
+    uint64 combat = 7;
+    uint32 love = 8;
+    uint32 stage = 9;
+    string signature = 10;
+    uint32 vip_level = 11;
+    string guildName = 12;
+    uint64 exp = 13;
+    uint32 titleId = 14;
+    uint32 str = 15;
+    uint32 brain = 16;
+    uint32 politics = 17;
+    uint32 prestige = 18;
+    repeated uint32 titleIds = 19;
+    uint32 lastLoginTime = 20;
+    uint32 fightScore = 21;
+    uint32 devotionTotal = 22;
+    uint32 buildType = 23;
+    uint32 guildId = 24;
+}
+
+message SC_UPDATE_ROLE_PRO {
+    uint32 uid = 1;
+    string nickname = 2;
+    string headimgurl = 3;
+    uint32 diamond = 4;
+    uint64 gold = 5;
+    uint32 level = 6;
+    uint32 vipLevel = 7;
+    uint64 exp = 8;
+    uint32 vipExp = 9;
+    uint32 gender = 10;
+    uint32 iconId = 11;
+    uint64 army = 12;
+    uint64 rice = 13;
+    uint32 reputation = 14;
+    uint32 stamina = 15;
+    uint32 politicsCnt = 16;
+    uint32 intelCnt = 17;
+    uint32 armyCnt = 18;
+    uint32 banquetPoint = 19;
+    uint32 devotion = 20;
+    uint32 activePoint = 21;
+    uint32 taofaScore = 22;
+    uint32 combat = 23;
+    uint32 timeStamina = 24;
+    string signature = 25;
+    uint32 timePoliticsCnt = 26;
+    uint32 timeIntelCnt = 27;
+    uint32 timeArmyCnt = 28;
+    uint32 stage = 29;
+    uint32 titleId = 30;
+    uint32 admireCombat = 31;
+    uint32 admireLove = 32;
+    uint32 signedDays = 33;
+    uint32 admireStage = 34;
+    uint32 curSignedState = 35;
+    uint32 curSevenState = 36;
+    uint32 sevenDays = 37;
+    uint32 hanlinExp = 38;
+    uint32 hanlinId = 39;
+    uint32 fieldScore = 40;
+    uint32 fieldBossHpLeft = 41;
+    uint32 fieldBossId = 42;
+    uint32 salaryCnt = 43;
+    uint32 fieldPoint = 44;
+    uint32 energy = 45;
+    uint32 timeEnergy = 46;
+    uint32 zhenzai = 47;
+    uint32 luck = 48;
+    uint32 silkId = 49;
+    uint32 fastSilk = 50;
+    uint32 timeLeftGuild = 51;
+    uint32 buildType = 52;
+    uint64 bossHp = 53;
+    uint32 gmAuth = 54;
+    uint32 taofaId = 55;
+    uint32 taofaMaxId = 56;
+    uint32 guildId = 57;
+    uint32 devotionTotal = 58;
+    uint32 enemyUid = 59;
+    uint32 fightPower = 60;
+    uint32 timeMonthCard = 61;
+    uint32 timeLifeCard = 62;
+    uint32 joinCnt = 63;
+    uint32 taofaTotal = 64;
+    uint32 createTime = 65;
+    uint32 harvestPoint = 66;
+    uint32 timeVipCard = 67;
+    uint32 str = 68;
+    uint32 brain = 69;
+    uint32 politics = 70;
+    uint32 prestige = 71;
+}
+
+message SC_TEST_ECHO {
+    int32 cmd_id = 1;
+    string msg = 2;
+}
+
+message SC_ROLE_ONLINE {
+    int32 result = 1; // 0 创角色 1 成功
+}
+
+message SC_ROLE_HEART_BEAT {
+    string msg = 1;
+    string client_version = 2; // 合法的客户端资源版本
+}
+
+message LOGIN_SC_LOGIN {
+    uint32 server_id = 1;
+    uint32 gm_auth = 2;
+    uint32 is_new = 3;
+}
+
+message LOGIN_SC_CHOOSE_SERVER {
+    string ip = 1;
+    uint32 port = 2;
+    string version = 3;
+    string res_version = 4;
+    string res_server_address = 5;
+    uint32 uid = 6;
+    string token = 7;
+    uint32 serverId = 8;
+    string serverName = 9;
+}
+
+message LOGIN_SC_GET_SERVER_LIST {
+    message Server {
+        uint32 server_id = 1;
+        string name = 2;
+        uint32 status = 3;
+        uint32 level = 4;
+        uint32 lastLoginTime = 5;
+    }
+
+    repeated Server servers = 1;
+}
+
+message LOGIN_SC_GET_INFO {
+    string notice = 1;
+    string version = 2;
+    string update_address = 3;
+}
+
+message LOGIN_SC_QUERY {
+    string ip = 1;
+    uint32 port = 2;
+    uint32 state = 3;
+    bool success = 4;
+}
+
+message SC_ROLE_CREATE {
+    uint32 reslut = 1; // 0 成功 1 名字超长 2 名字非法 3 名字重复
+}
+
+message SC_GM_CMD {
+    string msg = 1;
+}
+
+message SC_UPDATE_CHAT {
+    enum EChatTempalteId {
+        none = 0;
+        banquet = 1; // {0}在酒楼设{1}款待各位官大人，还请赏脸赴宴 [玩家名称，宴会类型, uid]
+        hanlin = 2; // {0}在翰林院授课设席，还请各位官大人前往付席 [玩家名称, uid]
+        guildStage = 3; // {0}开启{1}帮会副本，还请各位官大人前往击杀 [玩家名称，stageId]
+        throneOnline = 4; // ［称号展示］ {0}上朝了，众卿速速朝拜 [玩家名称，titleId]
+    }
+
+    message ChatMsg {
+        uint32 roleId = 1; // 为1时，name=系统公告，且不可以查看
+        string name = 2;
+        uint32 titleId = 3;
+        uint32 vipLevel = 4;
+        string msg = 5;
+        uint32 createTime = 6;
+        uint32 channel = 7;
+        uint32 channelParam = 8;
+        EChatTempalteId templateId = 9;
+        repeated string strParams = 10;
+    }
+
+    repeated ChatMsg msgs = 1;
+}
+
+message SC_UPDATE_RECHARGE {
+}
+
+message SC_ROLE_OFFLINE {
+    uint32 type = 1; // 1 你的帐号在其他地方登录 2 服务器维护
+}

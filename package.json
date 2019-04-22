@@ -1,0 +1,108 @@
+{
+  "name": "bingo",
+  "author": {
+    "name": "sunwenteng"
+  },
+  "main": "index.js",
+  "homepage": "https://github.com/sunwenteng/bingo",
+  "version": "0.0.1",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/sunwenteng/bingo/LICENSE.txt"
+    }
+  ],
+  "description": "bingo is a server based on node, redis and mysql",
+  "keywords": [
+    "node",
+    "redis",
+    "mysql",
+    "winston",
+    "cache",
+    "game"
+  ],
+  "pkg": {
+    "scripts": [
+      "dist/app/game/controllers/*.js",
+      "dist/app/pay/controllers/*.js"
+    ]
+  },
+  "bugs": {
+    "url": "https://github.com/sunwenteng/bingo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sunwenteng/bingo/bingo.git"
+  },
+  "preferGlobal": true,
+  "bin": {
+    "game_app": "dist/app/game/game_app.js",
+    "cache_app": "dist/app/game/cache_app.js",
+    "login_app": "dist/app/game/login_app.js",
+    "gm_app": "dist/app/game/gm_app.js",
+    "pay_app": "dist/app/game/pay_app.js"
+  },
+  "engines": {
+    "node": ">=8.11.1"
+  },
+  "dependencies": {
+    "body": "^5.1.0",
+    "commander": "^2.19.0",
+    "express": "^4.16.3",
+    "fs": "0.0.1-security",
+    "hiredis": "^0.5.0",
+    "long": "^4.0.0",
+    "moment": "^2.22.2",
+    "mysql": "^2.15.0",
+    "protobufjs": "^6.8.6",
+    "redis": "^2.8.0",
+    "request": "^2.87.0",
+    "source-map-support": "^0.5.6",
+    "uuid": "^3.3.2",
+    "winston": "^2.4.2",
+    "winston-daily-rotate-file": "^3.2.1",
+    "ws": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/commander": "^2.12.2",
+    "@types/core-js": "^0.9.46",
+    "@types/express": "^4.11.1",
+    "@types/long": "^4.0.0",
+    "@types/moment": "^2.13.0",
+    "@types/mysql": "^2.15.4",
+    "@types/node": "^10.1.2",
+    "@types/protobufjs": "^6.0.0",
+    "@types/redis": "^2.8.6",
+    "@types/request": "^2.47.0",
+    "@types/source-map-support": "^0.4.0",
+    "@types/uuid": "^3.4.4",
+    "@types/winston": "^2.3.9",
+    "@types/ws": "^5.1.1",
+    "gulp": "^3.9.1",
+    "gulp-cli": "^2.0.1",
+    "gulp-load-plugins": "^1.5.0",
+    "gulp-sourcemaps": "^2.6.4",
+    "gulp-typescript": "^4.0.2",
+    "images": "^3.0.1",
+    "pkg": "^4.3.4",
+    "scp2": "^0.5.0",
+    "ssh2": "^0.6.1",
+    "tar": "^4.4.6",
+    "tslint": "^5.10.0",
+    "typescript": "^2.8.3",
+    "xlsx": "^0.13.2"
+  },
+  "scripts": {
+    "init": "yarn install",
+    "compile": "gulp compile",
+    "start_game": "node ./dist/app/game/game_app.js"
+  },
+  "maintainers": [
+    {
+      "name": "sunwenteng",
+      "email": "elvessun@gmail.com"
+    }
+  ],
+  "directories": {},
+  "readme": "README.md"
+}

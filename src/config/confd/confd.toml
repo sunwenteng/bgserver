@@ -1,0 +1,12 @@
+backend = "redis"
+confdir = "/etc/confd"
+log-level = "debug"
+# 间隔 1 秒同步一次配置文件
+interval = 5
+nodes = [
+  "127.0.0.1:6379/0",
+]
+scheme = "http"
+# redis的密码，不是 password 参数
+client_key = "redis@ime"
+#watch = true
