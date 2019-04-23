@@ -1,10 +1,10 @@
-import * as express from 'express';
-import {BaseController, FAILURE, IBaseParam, SUCCESS} from "../base_controller";
+import {PayUtil, FAILURE, IBaseParam, SUCCESS} from "../pay_util";
 import {Log} from "../../../lib/util/log";
 import {md5} from "../../../lib/util/game_util";
 import {EChargeState} from "../../../lib/mysql/login_db";
 import {realNow} from "../../../lib/util/time";
 import {EChargeType} from "../../../lib/mysql/login_db";
+import {Controller, Get, Params, Post} from "routing-controllers";
 
 interface IJianwanParam extends IBaseParam {
     nt_data: string;
@@ -29,39 +29,37 @@ const product_key = '2a493a7fb8fa41a28cac4a74b796fbfe';
 const md5key = '83439af2fe704f8cb25122f903a9caa2';
 
 // http://guanreng1.imobile-ent.com:8889/jianwan/pay
-export class JianwanController extends BaseController {
-    public static instance = new JianwanController();
+@Controller('/jianwan')
+export class JianwanController {
 
-    public async pay(req: express.Request, res: express.Response, args: IJianwanParam) {
+    @Get('/pay')
+    public async pay(@Params() args: IJianwanParam) {
         try {
             let md5Local = md5(args.nt_data + args.sign + md5key);
             Log.sInfo(`${md5Local}, ${args.md5Sign}, ${md5Local === args.md5Sign}`);
             if (md5Local !== args.md5Sign) {
-                this.send(res, 'jianwan sign error');
-                return;
+                return 'jianwan sign error';
             }
 
             let nt_data: nt_data = JSON.parse(args.nt_data_json);
             let arr = nt_data.extras_params.split('-');
             if (arr.length !== 4) {
-                this.send(res, 'extra param error');
-                return;
+                return 'extra param error';
             }
 
             let platformId = parseInt(arr[0]), roleId = parseInt(arr[1]), serverId = parseInt(arr[2]),
                 goodsId = parseInt(arr[3]);
 
             // 简玩要求重复订单情况下直接返回SUCCESS
-            let innerOrderId = this.getInnerOrderId(platformId, serverId, roleId, nt_data.order_no);
-            let isDuplicate = await this.isOrderDuplicate(innerOrderId);
+            let innerOrderId = PayUtil.getInnerOrderId(platformId, serverId, roleId, nt_data.order_no);
+            let isDuplicate = await PayUtil.isOrderDuplicate(innerOrderId);
             if (isDuplicate) {
                 Log.sWarn('order duplicate, id=' + innerOrderId);
-                this.send(res, SUCCESS);
-                return;
+                return SUCCESS;
             }
 
             // 同步db
-            let result = await this.sync2Login({
+            let result = await PayUtil.sync2Login({
                 role_id: roleId,
                 goods_id: goodsId,
                 goods_quantity: 1,
@@ -82,15 +80,15 @@ export class JianwanController extends BaseController {
             }, serverId, false);
 
             if (result) {
-                this.send(res, SUCCESS);
+                return SUCCESS;
             }
             else {
-                this.send(res, FAILURE);
+                return FAILURE;
             }
         }
         catch (e) {
             Log.sError(e);
-            this.send(res, FAILURE);
+            return FAILURE;
         }
     }
 }

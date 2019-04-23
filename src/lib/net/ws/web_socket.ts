@@ -132,7 +132,7 @@ export class Server {
         });
     }
 
-    public start<T extends UserSession>(sessionClass: new () => T, webControllerPath?: string): Promise<void> {
+    public start<T extends UserSession>(sessionClass: new () => T | null, webControllerPath?: string): Promise<void> {
         return new Promise<void>(((resolve, reject) => {
             Global.isAppValid = true;
             let app = express();
@@ -185,19 +185,24 @@ export class Server {
                 reject(error);
             });
 
-            this._server.on('connection', ((s: ws, req: http.IncomingMessage) => {
-                let ip = '';
-                if (req.headers['x-forwarded-for']) {
-                    ip = (req.headers['x-forwarded-for'] as string).split(/\s*,\s*/)[0];
-                }
-                else {
-                    ip = req.connection.remoteAddress;
-                }
-                const socket = new WebSocket(ip);
-                socket.init(++uid, s, sessionClass);
-                Log.sInfo('new Web_socket connection, ip=' + socket.ip + ', uid=' + socket.uid);
+            if (sessionClass) {
+                this._server.on('connection', ((s: ws, req: http.IncomingMessage) => {
+                    let ip = '';
+                    if (req.headers['x-forwarded-for']) {
+                        ip = (req.headers['x-forwarded-for'] as string).split(/\s*,\s*/)[0];
+                    }
+                    else {
+                        ip = req.connection.remoteAddress;
+                    }
+                    const socket = new WebSocket(ip);
+                    socket.init(++uid, s, sessionClass);
+                    Log.sInfo('new Web_socket connection, ip=' + socket.ip + ', uid=' + socket.uid);
 
-            }));
+                }));
+            }
+            else {
+                Log.sWarn('no websocket server supported, start web server');
+            }
         }));
     }
 }

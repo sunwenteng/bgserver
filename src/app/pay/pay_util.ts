@@ -31,10 +31,8 @@ export interface IChargeInfoParam {
 export const SUCCESS = 'SUCCESS';
 export const FAILURE = 'FAILURE';
 
-export abstract class BaseController {
-    abstract async pay(req: express.Request, res: express.Response, args: IBaseParam);
-
-    async sync2Login(args: IChargeInfoParam, serverId: number, bCheckChargeMoney: boolean = true): Promise<boolean> {
+export class PayUtil {
+    static async sync2Login(args: IChargeInfoParam, serverId: number, bCheckChargeMoney: boolean = true): Promise<boolean> {
         return new Promise<boolean>(async resolve => {
             // 验证用户信息
             let passportId = await this.getPassportId(args.role_id);
@@ -67,18 +65,18 @@ export abstract class BaseController {
         });
     }
 
-    getInnerOrderId(platformId: number, serverId: number, roleId: number, orderNo: string): string {
+    static getInnerOrderId(platformId: number, serverId: number, roleId: number, orderNo: string): string {
         return (platformId + '-' + serverId + '-' + roleId + '-' + orderNo);
     }
 
-    async isOrderDuplicate(innerOrderId: string): Promise<boolean> {
+    static async isOrderDuplicate(innerOrderId: string): Promise<boolean> {
         return new Promise<boolean>(async resolve => {
             let result = await LoginDB.conn.execute('select auto_id from charge_info where ?', {inner_order_id: innerOrderId});
             resolve(result.length > 0);
         });
     }
 
-    async getPassportId(roleId) {
+    static async getPassportId(roleId) {
         let result = await LoginDB.conn.execute('select passport_id from re_passport_player where ?', {role_id: roleId});
         if (result.length === 0) {
             Log.sError('role not exist, uid=' + roleId);
@@ -87,14 +85,5 @@ export abstract class BaseController {
         else {
             return result[0].passport_id;
         }
-    }
-
-    send(res: express.Response, data) {
-        if (typeof data !== 'string') {
-            data = data.toString();
-        }
-
-        Log.sInfo('url=%s, data send=%s', res['req']['originalUrl'], data);
-        res.send(data);
     }
 }
