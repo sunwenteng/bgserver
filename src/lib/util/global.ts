@@ -4,8 +4,6 @@ export class Global {
     static config: any;
     static isAppValid: boolean = true;
     static playerInfoMysqlColumn = [];
-    static allControllers = {};
-    static allActions = {};
 
     static setConfig(path: string, bForce: boolean) {
         if (!bForce && Global.config) {
