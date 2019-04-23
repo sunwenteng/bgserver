@@ -26,19 +26,22 @@ export class GameSession extends UserSession {
                 let msg = C2S.Message.decode(data);
                 this.pushPacket(msg);
                 // this.newUpdate();
-            } catch (e) {
+            }
+            catch (e) {
                 Log.sError(e);
             }
         });
     }
 
     @execTime(false)
-    private async doController(controller: Function, session: GameSession, packet: any) {
+    private async doAction(action: Function, session: GameSession, packet: any) {
         if ('CS_ROLE_HEART_BEAT' !== packet.kind) {
             Log.uInfo(this.role ? this.role.uid : 0, 'serverId=%d, socketUid=%d, roleId=%d, name=%s, data=%j', this.role ? this.role.serverId : 0, this.socket.uid, this.role ? this.role.uid : 0, packet.kind, packet[packet.kind]);
         }
-        // await controller(session, packet[packet.kind]);
-        await controller.apply(GameWorld.instance.getScopes(packet[packet.kind].constructor.name), [session, packet[packet.kind]]);
+        else {
+            Log.uDebug(this.role ? this.role.uid : 0, 'serverId=%d, socketUid=%d, roleId=%d, name=%s, data=%j', this.role ? this.role.serverId : 0, this.socket.uid, this.role ? this.role.uid : 0, packet.kind, packet[packet.kind]);
+        }
+        await action.apply(GameWorld.instance.getController(packet[packet.kind].constructor.name), [session, packet[packet.kind]]);
     }
 
     // public async newUpdate() {
@@ -71,7 +74,7 @@ export class GameSession extends UserSession {
     //     //     continue;
     //     // }
     //
-    //     controller = GameWorld.instance.getController(packet.kind);
+    //     controller = GameWorld.instance.getAction(packet.kind);
     //     if (controller) {
     //         await this.doController(controller, this, packet);
     //     }
@@ -84,7 +87,7 @@ export class GameSession extends UserSession {
     // }
 
     public async update() {
-        let controller,
+        let action,
             packet,
             counter = 0,
             cur = this.packets.head,
@@ -101,18 +104,9 @@ export class GameSession extends UserSession {
             this.packets.deleteNode(t);
             cur = cur.next;
 
-            if (packet.kind !== 'CS_ROLE_ONLINE' && packet.kind !== 'CS_ROLE_CREATE' && this.role === null) {
-                Log.sWarn('not receive online packet yet, uid=' + this.socket.uid);
-                continue;
-            }
-            else if (packet.kind === 'CS_ROLE_ONLINE' && packet.kind !== 'CS_ROLE_CREATE' && this.role !== null) {
-                Log.sWarn('already online, duplicate online packet, roleId=%d, socketUid=%d', this.role.uid, this.socket.uid);
-                continue;
-            }
-
-            controller = GameWorld.instance.getController(packet.kind);
-            if (controller) {
-                await this.doController(controller, this, packet).catch((e) => {
+            action = GameWorld.instance.getAction(packet.kind);
+            if (action) {
+                await this.doAction(action, this, packet).catch((e) => {
                     Log.sError(e);
                 });
             }

@@ -50,3 +50,9 @@ export enum EMysqlValueType {
     blob = 11,      // <= 64k
     longblob = 11   // unlimited but not efficient
 }
+
+export enum EActionCheckType {
+    noCheck = 0,            // 不需要检测
+    needAuth = 1,           // 上线成功前发送无效
+    authedThenInvalid = 2   // 上线成功后再次发送，无效
+}

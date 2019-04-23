@@ -1,12 +1,14 @@
 import {C2S, S2C} from "../../proto/cmd";
 import {Role} from "../modles/role";
-import {action, controller} from "../../../lib/util/descriptor";
+import {BGAction} from "../../../lib/util/descriptor";
+import {Get, JsonController} from "routing-controllers";
+import * as uuid from 'uuid';
+import {EActionCheckType} from "../modles/defines";
 
-@controller
+@JsonController('/test')
 export class TestController {
-    public static instance = new TestController();
 
-    @action()
+    @BGAction(EActionCheckType.noCheck)
     echo(role: Role, msg: C2S.CS_TEST_ECHO) {
         let pck = S2C.SC_TEST_ECHO.create();
         pck.msg = '';
@@ -14,13 +16,23 @@ export class TestController {
         role.sendProtocol(pck);
     }
 
-    @action()
+    @BGAction(EActionCheckType.authedThenInvalid)
     async readAndWrite(role: Role, msg: C2S.CS_TEST_ECHO) {
 
     }
 
-    @action()
+    @BGAction()
     async readonly(role: Role, msg: C2S.CS_TEST_ECHO) {
 
+    }
+
+    @Get('/uuid')
+    uuid() {
+        return uuid.v1();
+    }
+
+    @Get()
+    hello() {
+        return 'hello';
     }
 }

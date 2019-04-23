@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import * as ws from 'ws';
 import * as express from 'express';
 import * as http from 'http';
@@ -5,9 +6,15 @@ import {Log} from '../../util/log';
 import {UserSession} from '../user_session';
 import * as bodyParser from 'body-parser';
 import * as url from "url";
-import * as GameUtil from "../../util/game_util";
 import {Global} from "../../util/global";
-import * as uuid from 'uuid';
+import {
+    Action,
+    ExpressMiddlewareInterface, Interceptor,
+    InterceptorInterface,
+    Middleware,
+    useExpressServer
+} from "routing-controllers";
+import {parseHttpParams} from "../../util/game_util";
 
 let uid: number = 0;
 
@@ -81,6 +88,25 @@ export class WebSocket {
     }
 }
 
+@Middleware({type: "before"})
+class LoggingMiddleware implements ExpressMiddlewareInterface {
+
+    use(request: any, response: any, next: (err: any) => any): void {
+        Log.sInfo(`url=${request.originalUrl}, params=${JSON.stringify(parseHttpParams(request))}`);
+        next(null);
+    }
+
+}
+
+@Interceptor()
+class LoggingInterceptor implements InterceptorInterface {
+    intercept(action: Action, content: any) {
+        Log.sInfo(`url=${action.request.originalUrl}, content=${content}`);
+        return content;
+    }
+
+}
+
 export class Server {
     private readonly _port: number;
     private readonly _host: string;
@@ -106,7 +132,7 @@ export class Server {
         });
     }
 
-    public start<T extends UserSession>(sessionClass: new () => T): Promise<void> {
+    public start<T extends UserSession>(sessionClass: new () => T, webControllerPath?: string): Promise<void> {
         return new Promise<void>(((resolve, reject) => {
             Global.isAppValid = true;
             let app = express();
@@ -125,30 +151,8 @@ export class Server {
                     next();
                 }
             });
-            app.all("/test", (req: express.Request, res: express.Response) => {
-                let args = GameUtil.parseHttpParams(req);
-
-                switch (args['methods']) {
-                    case 'stats':
-                        Log.sInfo('stats: ' + args['content']);
-                        res.send('OK');
-                        break;
-                    case 'uuid':
-                        res.send(uuid.v1());
-                        break;
-                    default:
-                        Log.sInfo('from test: ' + JSON.stringify(args));
-                        res.send(JSON.stringify(args));
-                        break;
-                }
-            });
 
             let httpServer = http.createServer(app);
-            // https.createServer({
-            //     cert: fs.readFileSync('/path/to/cert.pem'),
-            //     key: fs.readFileSync('/path/to/key.pem')
-            // }, app)
-
             httpServer.on('upgrade', (request, socket, head) => {
                 const pathname = url.parse(request.url).pathname;
                 if (pathname === '/websocket') {
@@ -161,7 +165,15 @@ export class Server {
                 Log.sInfo('Web_socket server start, address=%j', httpServer.address());
                 resolve();
             });
+
             httpServer.listen(this._port, this._host);
+            if (webControllerPath) {
+                useExpressServer(app, {
+                    controllers: [webControllerPath],
+                    middlewares: [LoggingMiddleware],
+                    interceptors: [LoggingInterceptor]
+                });
+            }
 
             this._server = new ws.Server({
                 noServer: true,

@@ -4,7 +4,7 @@ import {RedisMgr, RedisType} from "../redis/redis_mgr";
 import {RoleModel} from "../../app/game/modles/role_model";
 import {GameWorld, WorldDataRedisKey} from "../../app/game/game_world";
 import {C2S, S2C} from "../../app/proto/cmd";
-import {EMysqlValueType} from "../../app/game/modles/defines";
+import {EActionCheckType, EMysqlValueType} from "../../app/game/modles/defines";
 import {Global} from "./global";
 
 /**
@@ -20,13 +20,15 @@ export function execTime(bToLog: boolean = true) {
             let returnValue = null;
             if (Object.prototype.toString.call(originalMethod) === "[object AsyncFunction]") {
                 returnValue = await originalMethod.apply(this, args);
-            } else {
+            }
+            else {
                 returnValue = originalMethod.apply(this, args);
             }
             let end = Date.now();
             if (bToLog) {
                 Log.sInfo('time consumed: ' + this.constructor.name + ':' + methodName + ': ' + (end - start) + 'ms');
-            } else {
+            }
+            else {
                 console.log('time consumed: ' + this.constructor.name + ':' + methodName + ': ' + (end - start) + 'ms');
             }
             return returnValue;
@@ -34,71 +36,84 @@ export function execTime(bToLog: boolean = true) {
     };
 }
 
-export function controller(target) {
-    console.log(target);
-    Global.allControllers[target.prototype.constructor.name] = target.instance;
-}
-
 /**
  * action 装饰器，被改装饰器修饰的方法之间如果出现互相调用，会出现锁死问题，后续可以实现可重入锁以做优化
  */
-export function action() {
+export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAuth) {
     return (target: Object, methodName: string, descriptor: TypedPropertyDescriptor<Function>) => {
         let originalMethod = descriptor.value;
         descriptor.value = async (...args) => {
-            if (args[0] instanceof Role) {
-                await originalMethod.apply(GameWorld.instance.getScopes(args[1].constructor.name), args);
-            } else {
-                let role: Role = args[0].role;
-                if (!role) {
-                    throw new Error('no role in session');
-                }
-                args[0] = role;
-                return await RedisMgr.getInstance(RedisType.GAME).lock(Role.getRedisKey(role.uid), async () => {
-                    let needReload = await RedisMgr.getInstance(RedisType.GAME).sismember(WorldDataRedisKey.RELOAD_ROLES, role.uid);
-                    if (needReload) {
-                        await role.load();
-                        await RedisMgr.getInstance(RedisType.GAME).srem(WorldDataRedisKey.RELOAD_ROLES, role.uid);
-                        role.computeCombat();
-                        Log.uWarn(role.uid, 'role need reload, uid=' + role.uid);
-                    }
-
-                    role.refreshDaily(true);
-                    role.refreshWeekly();
-
-                    await originalMethod.apply(GameWorld.instance.getScopes(args[1].constructor.name), args);
-                    await role.notify();
-                    await role.save();
-                });
+            if (eCheckType === EActionCheckType.noCheck) {
+                await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
             }
+            else if (eCheckType === EActionCheckType.authedThenInvalid && args[0].role) {
+                Log.sWarn('already authorized, duplicate packet, roleId=%d, socketUid=%d', args[0].role.uid, args[0].socket.uid);
+            }
+            else if (eCheckType === EActionCheckType.needAuth && !args[0].role) {
+                Log.sWarn('not authorized, socketUid=' + this.socket.uid);
+            }
+            else {
+                if (args[0] instanceof Role) {
+                    await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
+                }
+                else {
+                    let role: Role = args[0].role;
+                    if (!role) {
+                        throw new Error('no role in session');
+                    }
+                    args[0] = role;
+                    return await RedisMgr.getInstance(RedisType.GAME).lock(Role.getRedisKey(role.uid), async () => {
+                        let needReload = await RedisMgr.getInstance(RedisType.GAME).sismember(WorldDataRedisKey.RELOAD_ROLES, role.uid);
+                        if (needReload) {
+                            await role.load();
+                            await RedisMgr.getInstance(RedisType.GAME).srem(WorldDataRedisKey.RELOAD_ROLES, role.uid);
+                            role.computeCombat();
+                            Log.uWarn(role.uid, 'role need reload, uid=' + role.uid);
+                        }
 
-            // let returnValue = null;
-            // if (!readonly) {
-            //     if (lock) {
-            //         returnValue = await RedisMgr.getInstance(RedisType.GAME).lock(role.getRedisKey(), async () => {
-            //             await role.load(mask);
-            //             await originalMethod.apply(this, args);
-            //             role.sendProUpdate();
-            //             await role.save();
-            //         });
-            //     }
-            //     else {
-            //         await role.load(mask);
-            //         await originalMethod.apply(this, args);
-            //         role.sendProUpdate();
-            //         await role.save();
-            //     }
-            // }
-            // else {
-            //     await role.load(mask);
-            //     returnValue = await originalMethod.apply(this, args);
-            // }
-            // return returnValue;
+                        role.refreshDaily(true);
+                        role.refreshWeekly();
+
+                        await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
+                        await role.notify();
+                        await role.save();
+                    });
+                }
+
+                // let returnValue = null;
+                // if (!readonly) {
+                //     if (lock) {
+                //         returnValue = await RedisMgr.getInstance(RedisType.GAME).lock(role.getRedisKey(), async () => {
+                //             await role.load(mask);
+                //             await originalMethod.apply(this, args);
+                //             role.sendProUpdate();
+                //             await role.save();
+                //         });
+                //     }
+                //     else {
+                //         await role.load(mask);
+                //         await originalMethod.apply(this, args);
+                //         role.sendProUpdate();
+                //         await role.save();
+                //     }
+                // }
+                // else {
+                //     await role.load(mask);
+                //     returnValue = await originalMethod.apply(this, args);
+                // }
+                // return returnValue;
+            }
         };
     };
 }
 
-export function dbField(type, len?) {
+/**
+ * runtime 不损耗性能，服务启动时注册
+ * @param type
+ * @param len
+ * @constructor
+ */
+export function BGMysql(type: EMysqlValueType, len?: number) {
     return (target: Object, key: string): void => {
         let dbString = '';
         switch (type) {
@@ -137,7 +152,7 @@ export function dbField(type, len?) {
  * @param {C2S.ERankType} rankType 绑定时，属性修改会自动更新对应排行榜
  * @returns {(target: Object, key: string) => void}
  */
-export function roleField(dynamic: boolean = false, summary: boolean = false, rankType?: C2S.ERankType) {
+export function BGField(dynamic: boolean = false, summary: boolean = false, rankType?: C2S.ERankType) {
     return (target: Object, key: string): void => {
         Object.defineProperty(target, key, {
             get: function () {
@@ -166,7 +181,8 @@ export function roleField(dynamic: boolean = false, summary: boolean = false, ra
                             }
                         }
                     }
-                } else if (this['fields'][key] !== newValue) {
+                }
+                else if (this['fields'][key] !== newValue) {
                     if (dynamic) {
                         this['dynamicFields'][key] = null;
                     }

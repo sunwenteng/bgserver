@@ -73,7 +73,8 @@ async function downloadConfigAndReload(url: string): Promise<boolean> {
         return new Promise<boolean>(async resolve => {
             try {
                 ConfigMgr.getInstance().loadAllConfig(dir);
-            } catch (e) {
+            }
+            catch (e) {
                 Log.sError(e);
                 resolve(false);
             }
@@ -105,19 +106,26 @@ async function downloadConfigAndReload(url: string): Promise<boolean> {
                 await doReload(process.cwd() + '/' + Global.config['app']['game']['config']);
                 Log.sError('downloadConfigAndReload Error, then rollback');
                 resolve(false);
-            } else {
+            }
+            else {
                 for (let file of files) {
                     fs.copyFileSync(bakDir + file, Global.config['app']['game']['config'] + file);
                 }
                 Log.sInfo('finish reload config');
                 resolve(true);
             }
-        } catch (e) {
+        }
+        catch (e) {
             await doReload(process.cwd() + '/' + Global.config['app']['game']['config']);
             Log.sError('downloadConfigAndReload Error, then rollback, e=' + e);
             resolve(false);
         }
     });
+}
+
+interface IController {
+    controller: Function;
+    action: Function;
 }
 
 export class GameWorld extends events.EventEmitter {
@@ -127,8 +135,7 @@ export class GameWorld extends events.EventEmitter {
 
     private readonly _sessionList: LinkedList<UserSession> = new LinkedList<UserSession>();
     private readonly _authedSessionMap: BMap<GameSession> = {}; // 玩家上线通过后加入进来
-    private readonly _allControllers: BMap<Function> = {};
-    private readonly _allScopes = {};
+    private readonly _allControllers: BMap<IController> = {};
     private readonly _timer: { [mutex: string]: time.RaceTimer } = {};
     private _updateServerRedis: IntervalTimer = new IntervalTimer(3);
     private _updateServers: IntervalTimer = new IntervalTimer(5);
@@ -173,7 +180,8 @@ export class GameWorld extends events.EventEmitter {
                     }
 
                 }
-            } else if (channel.indexOf(roleRedisPrefix) !== -1) {
+            }
+            else if (channel.indexOf(roleRedisPrefix) !== -1) {
                 let roleId = parseInt(channel.substr(roleRedisPrefix.length + 1));
                 let session = this._authedSessionMap[roleId];
                 if (!session) {
@@ -211,7 +219,8 @@ export class GameWorld extends events.EventEmitter {
             if (cur.element.socket.isSocketValid()) {
                 promises.push(cur.element.update());
                 cur = cur.next;
-            } else {
+            }
+            else {
                 t = cur;
                 this.delSession(t);
                 await cur.element.offline();
@@ -242,15 +251,16 @@ export class GameWorld extends events.EventEmitter {
             let oldServer = this.serverMap[server.server_id];
             if (oldServer) {
                 server.alive = (server.update_time !== oldServer.update_time);
-            } else {
+            }
+            else {
                 server.alive = true;
             }
             this.serverMap[server.server_id] = server;
         }
     }
 
-    public getController(cmd: string): Function {
-        return this._allControllers[cmd];
+    public getAction(cmd: string): Function {
+        return this._allControllers[cmd].action;
     }
 
     private registerController(): void {
@@ -264,23 +274,35 @@ export class GameWorld extends events.EventEmitter {
                     let controllerPath = __dirname + '/controllers/' + arr[1].toLowerCase() + '_controller.js';
                     if (!fs.existsSync(controllerPath)) {
                         Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller not exists');
-                    } else {
+                    }
+                    else {
                         for (let i = 0; i < arr.length; ++i) {
                             if (i > 2) {
                                 arr[i] = GameUtil.capitalize(arr[i]);
-                            } else {
+                            }
+                            else {
                                 arr[i] = arr[i].toLowerCase();
                             }
                         }
-                        let methodName = arr.slice(2, arr.length).join('');
-                        let module = require('./controllers/' + arr[1].toLowerCase() + '_controller');
-                        if (!module[GameUtil.capitalize(arr[1]) + 'Controller']
-                            || !module[GameUtil.capitalize(arr[1]) + 'Controller']['instance']
-                            || !module[GameUtil.capitalize(arr[1]) + 'Controller']['instance'][methodName]) {
+                        const methodName = arr.slice(2, arr.length).join('');
+                        const module = require('./controllers/' + arr[1].toLowerCase() + '_controller');
+                        const moduleClass = module[GameUtil.capitalize(arr[1]) + 'Controller'];
+                        if (!moduleClass) {
+                            Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller not exists');
+                        }
+                        else if (!moduleClass.prototype[methodName]) {
                             Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller, method=' + methodName + ' not exists');
-                        } else {
-                            this._allControllers[cmd] = module[GameUtil.capitalize(arr[1]) + 'Controller']['instance'][methodName];
-                            this._allScopes[cmd] = module[GameUtil.capitalize(arr[1]) + 'Controller']['instance'];
+                        }
+                        else {
+                            const className = moduleClass.prototype.constructor.name;
+                            // first inject
+                            if (!module[className]['instance']) {
+                                module[className]['instance'] = new moduleClass();
+                            }
+                            this._allControllers[cmd] = {
+                                controller: module[className]['instance'],
+                                action: module[className]['instance'][methodName]
+                            };
                         }
                     }
                 }
@@ -355,7 +377,8 @@ export class GameWorld extends events.EventEmitter {
             this.info.res_version_config = ret[0].res_version_config;
             this.info.status = ret[0].status;
             this.info.open_time = ret[0].open_time;
-        } else {
+        }
+        else {
             Log.sWarn(`gameserver_info no group_id=${this.info.group_id}, then default server 1`);
             let data = {
                 server_id: 1,
@@ -427,7 +450,8 @@ export class GameWorld extends events.EventEmitter {
             await RedisMgr.getInstance(RedisType.GAME).hmset(WorldDataRedisKey.GAME_SERVERS, data);
             if (this.info.instanceId !== 0) {
                 await RedisMgr.getInstance(RedisType.GAME).setWithParams(key, data[1], 'EX', 3 * 2);
-            } else {
+            }
+            else {
                 await RedisMgr.getInstance(RedisType.GAME).set(key, data[1]);
             }
         });
@@ -452,7 +476,8 @@ export class GameWorld extends events.EventEmitter {
                 setTimeout(async () => {
                     GameWorld.instance.stop().then(resolve);
                 }, 100);
-            } else {
+            }
+            else {
                 doStop().then(resolve);
             }
         }));
@@ -549,7 +574,8 @@ export class GameWorld extends events.EventEmitter {
                     let online = await GameWorld.isRoleOnline(roleId);
                     if (online) {
                         check();
-                    } else {
+                    }
+                    else {
                         resolve();
                     }
                 }, 10);
@@ -557,8 +583,8 @@ export class GameWorld extends events.EventEmitter {
         }));
     }
 
-    public getScopes(cmd) {
-        return this._allScopes[cmd];
+    public getController(cmd) {
+        return this._allControllers[cmd].controller;
     }
 
     private async loadGlobalData<T extends Model>(serverId: number, globalKey: GlobalKeyType, globalDataType: new () => T): Promise<any> {
@@ -574,13 +600,15 @@ export class GameWorld extends events.EventEmitter {
                         key_id: globalKey.db,
                         server_id: serverId,
                     });
-                } else if (ret[0].data !== null) {
+                }
+                else if (ret[0].data !== null) {
                     globalData.deserialize(ret[0].data.toString());
                 }
 
                 await RedisMgr.getInstance(RedisType.GAME).set(globalKey.redis + '_' + serverId, globalData.serialize());
                 Log.sInfo(globalKey.db + ' load success');
-            } else {
+            }
+            else {
                 globalData.deserialize(data);
             }
             resolve(globalData);
@@ -594,7 +622,8 @@ export class GameWorld extends events.EventEmitter {
         let redisKey = globalKey.redis + '_' + serverOrGroupId;
         if (readonly) {
             await cb(await this.loadGlobalData(serverOrGroupId, globalKey, globalDataType));
-        } else {
+        }
+        else {
             await RedisMgr.getInstance(RedisType.GAME).lock(redisKey, async (hasLock: boolean) => {
                 if (hasLock) {
                     await cb(await this.loadGlobalData(serverOrGroupId, globalKey, globalDataType));

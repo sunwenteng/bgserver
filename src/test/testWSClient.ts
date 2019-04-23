@@ -19,7 +19,7 @@ class Client {
         }
         msg[data.constructor.name] = data;
         let buffer = C2S.Message.encode(msg).finish();
-        if(this.ws.readyState === 1) {
+        if (this.ws.readyState === 1) {
             this.ws.send(buffer);
         }
     }
@@ -125,14 +125,14 @@ class Client {
 //     });
 // }
 
-for (let i = 100000; i < 100001; i++) {
-    new Client().init('127.0.0.1', 5555, (client) => {
-        client.uid = i;
-        client.sendC2SProto(C2S.CS_ROLE_ONLINE.create({
-            uid: i
-        }));
-    });
-}
+// for (let i = 100000; i < 100001; i++) {
+//     new Client().init('127.0.0.1', 5555, (client) => {
+//         client.uid = i;
+//         client.sendC2SProto(C2S.CS_ROLE_ONLINE.create({
+//             uid: i
+//         }));
+//     });
+// }
 
 // setInterval(()=>{
 //     if(!set.size)
@@ -140,3 +140,9 @@ for (let i = 100000; i < 100001; i++) {
 //     if(set.size < 100)
 //         console.log(set.values());
 // }, 1000);
+
+new Client().init('127.0.0.1', '5555', (client) => {
+    client.sendC2SProto(C2S.CS_TEST_ECHO.create({
+        msg: '1'
+    }));
+});
