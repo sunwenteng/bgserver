@@ -10,7 +10,7 @@ export class TestController {
     echo(role: Role, msg: C2S.CS_TEST_ECHO) {
         let pck = S2C.SC_TEST_ECHO.create();
         pck.msg = '';
-        pck.cmdId = 1;
+        pck.cmdId = 12;
         role.sendProtocol(pck);
     }
 

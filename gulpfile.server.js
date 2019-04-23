@@ -37,6 +37,7 @@ gulp.task('scripts_src', ['svn_update_server'], () => {
             target: "es2017",
             module: "commonjs",
             experimentalDecorators: true,
+            emitDecoratorMetadata: true,
         })).js
         .pipe($.sourcemaps.write({includeContent: false, sourceRoot: '/src'}))
         .pipe(gulp.dest('dist/'));
