@@ -11,12 +11,13 @@ import {
     Action,
     ExpressMiddlewareInterface, Interceptor,
     InterceptorInterface,
-    Middleware,
+    Middleware, RoutingControllersOptions,
     useExpressServer
 } from "routing-controllers";
 import {parseHttpParams} from "../../util/game_util";
 
 let uid: number = 0;
+const baseWebSocketPath = '/websocket';
 
 export enum SocketStatus {
     VALID,
@@ -132,7 +133,11 @@ export class Server {
         });
     }
 
-    public start<T extends UserSession>(sessionClass: new () => T | null, webControllerPath?: string): Promise<void> {
+    /**
+     * @param sessionClass null时启动一个web server
+     * @param options
+     */
+    public start<T extends UserSession>(sessionClass: new () => T | null, options?: RoutingControllersOptions): Promise<void> {
         return new Promise<void>(((resolve, reject) => {
             Global.isAppValid = true;
             let app = express();
@@ -155,37 +160,33 @@ export class Server {
             let httpServer = http.createServer(app);
             httpServer.on('upgrade', (request, socket, head) => {
                 const pathname = url.parse(request.url).pathname;
-                if (pathname === '/websocket') {
+                if (pathname === baseWebSocketPath) {
                     this._server.handleUpgrade(request, socket, head, (ws) => {
                         this._server.emit('connection', ws, request);
                     });
                 }
             });
             httpServer.on('listening', () => {
-                Log.sInfo('Web_socket server start, address=%j', httpServer.address());
+                Log.sInfo('Web_socket server start, address=%j, basePath=%s', httpServer.address(), baseWebSocketPath);
                 resolve();
             });
 
             httpServer.listen(this._port, this._host);
-            if (webControllerPath) {
-                useExpressServer(app, {
-                    controllers: [webControllerPath],
-                    middlewares: [LoggingMiddleware],
-                    interceptors: [LoggingInterceptor]
-                });
+            if (options) {
+                useExpressServer(app, options);
             }
 
-            this._server = new ws.Server({
-                noServer: true,
-                maxPayload: 10240,
-            });
-
-            this._server.on('error', (error: Error) => {
-                Log.sError(error);
-                reject(error);
-            });
-
             if (sessionClass) {
+                this._server = new ws.Server({
+                    noServer: true,
+                    maxPayload: 10240,
+                });
+
+                this._server.on('error', (error: Error) => {
+                    Log.sError(error);
+                    reject(error);
+                });
+
                 this._server.on('connection', ((s: ws, req: http.IncomingMessage) => {
                     let ip = '';
                     if (req.headers['x-forwarded-for']) {

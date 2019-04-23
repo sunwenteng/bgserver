@@ -26,7 +26,9 @@ async function main() {
     await LoginDB.start(Global.config['mysql']['login_db']);
 
     let server = new Server(Global.config['app']['pay']['ip'], parseInt(Global.config['app']['pay']['port']));
-    await server.start(null, __dirname + '/controllers/**/*.js');
+    await server.start(null, {
+        controllers: [__dirname + '/controllers/**/*.js']
+    });
 }
 
 main().then(() => {

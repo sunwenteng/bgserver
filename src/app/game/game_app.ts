@@ -40,7 +40,9 @@ async function main() {
     await GameWorld.instance.start();
 
     let server = new Server(Global.config['app']['game']['ip'], parseInt(Global.config['app']['game']['port']));
-    await server.start(GameSession, __dirname + '/controllers/**/*.js');
+    await server.start(GameSession, {
+        controllers: [__dirname + '/controllers/**/*.js']
+    });
 
     let mainLoop = new Loop(GameWorld.instance.update, GameWorld.instance, () => !Global.isAppValid, 100);
     mainLoop.run();
