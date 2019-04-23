@@ -37,7 +37,8 @@ export function execTime(bToLog: boolean = true) {
 }
 
 /**
- * action 装饰器，被改装饰器修饰的方法之间如果出现互相调用，会出现锁死问题，后续可以实现可重入锁以做优化
+ * 业务场景简单的时候，可以去除分布式锁逻辑
+ * action 装饰器，被改装饰器修饰的方法之间如果出现互相调用，会出现锁死问题（已修正，不推荐BGAction之间相互调用，有的话也抽象service），后续可以实现可重入锁以做优化
  */
 export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAuth) {
     return (target: Object, methodName: string, descriptor: TypedPropertyDescriptor<Function>) => {
@@ -52,57 +53,59 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
             else if (eCheckType === EActionCheckType.needAuth && !args[0].isAuthorized) {
                 Log.sWarn('not authorized, socketUid=' + this.socket.uid);
             }
-            else {
-                if (args[0] instanceof Role) {
-                    await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
-                }
-                else {
-                    let role: Role = args[0].role;
-                    if (!role) {
-                        throw new Error('no role in session');
-                    }
-                    args[0] = role;
-                    return await RedisMgr.getInstance(RedisType.GAME).lock(Role.getRedisKey(role.uid), async () => {
-                        let needReload = await RedisMgr.getInstance(RedisType.GAME).sismember(WorldDataRedisKey.RELOAD_ROLES, role.uid);
-                        if (needReload) {
-                            await role.load();
-                            await RedisMgr.getInstance(RedisType.GAME).srem(WorldDataRedisKey.RELOAD_ROLES, role.uid);
-                            role.computeCombat();
-                            Log.uWarn(role.uid, 'role need reload, uid=' + role.uid);
-                        }
-
-                        role.refreshDaily(true);
-                        role.refreshWeekly();
-
-                        await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
-                        await role.notify();
-                        await role.save();
-                    });
-                }
-
-                // let returnValue = null;
-                // if (!readonly) {
-                //     if (lock) {
-                //         returnValue = await RedisMgr.getInstance(RedisType.GAME).lock(role.getRedisKey(), async () => {
-                //             await role.load(mask);
-                //             await originalMethod.apply(this, args);
-                //             role.sendProUpdate();
-                //             await role.save();
-                //         });
-                //     }
-                //     else {
-                //         await role.load(mask);
-                //         await originalMethod.apply(this, args);
-                //         role.sendProUpdate();
-                //         await role.save();
-                //     }
-                // }
-                // else {
-                //     await role.load(mask);
-                //     returnValue = await originalMethod.apply(this, args);
-                // }
-                // return returnValue;
+            else if (args[0] instanceof Role) {
+                Log.sError('BGAction cannot call each other');
             }
+            else {
+                let role: Role = args[0].role;
+                if (!role) {
+                    throw new Error('no role in session');
+                }
+                args[0] = role;
+                return await RedisMgr.getInstance(RedisType.GAME).lock(Role.getRedisKey(role.uid), async () => {
+                    let needReload = await RedisMgr.getInstance(RedisType.GAME).sismember(WorldDataRedisKey.RELOAD_ROLES, role.uid);
+                    if (needReload) {
+                        await role.load();
+                        await RedisMgr.getInstance(RedisType.GAME).srem(WorldDataRedisKey.RELOAD_ROLES, role.uid);
+                        role.computeCombat();
+                        Log.uWarn(role.uid, 'role need reload, uid=' + role.uid);
+                    }
+
+                    role.refreshDaily(true);
+                    role.refreshWeekly();
+
+                    await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
+                    /**
+                     * todo
+                     * 下面两处可以异步，后续进行测试
+                     */
+                    await role.notify();
+                    await role.save();
+                });
+            }
+
+            // let returnValue = null;
+            // if (!readonly) {
+            //     if (lock) {
+            //         returnValue = await RedisMgr.getInstance(RedisType.GAME).lock(role.getRedisKey(), async () => {
+            //             await role.load(mask);
+            //             await originalMethod.apply(this, args);
+            //             role.sendProUpdate();
+            //             await role.save();
+            //         });
+            //     }
+            //     else {
+            //         await role.load(mask);
+            //         await originalMethod.apply(this, args);
+            //         role.sendProUpdate();
+            //         await role.save();
+            //     }
+            // }
+            // else {
+            //     await role.load(mask);
+            //     returnValue = await originalMethod.apply(this, args);
+            // }
+            // return returnValue;
         };
     };
 }
