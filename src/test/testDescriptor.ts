@@ -1,17 +1,43 @@
-import {Role} from "../app/game/modles/role";
+import "reflect-metadata";
+import {Container, Inject, Service} from "typedi";
 
-const cnt = 10000000;
-
-console.time('1');
-let j = 0;
-for (let i = 0; i < cnt; i++) {
-    j += 1;
+@Service()
+class BeanFactory {
+    create() {
+    }
 }
-console.timeEnd('1');
 
-console.time('2');
-let role = new Role(1);
-for (let i = 0; i < cnt; i++) {
-    role.combat += 1;
+@Service()
+class SugarFactory {
+    create() {
+    }
 }
-console.timeEnd('2');
+
+@Service()
+class WaterFactory {
+    constructor() {
+        console.log(1);
+    }
+
+    create() {
+    }
+}
+
+class CoffeeMaker {
+
+    @Inject()
+    beanFactory: BeanFactory;
+
+    @Inject()
+    sugarFactory: SugarFactory;
+
+    @Inject()
+    waterFactory: WaterFactory;
+
+    make() {
+        this.beanFactory.create();
+        this.sugarFactory.create();
+        this.waterFactory.create();
+    }
+
+}

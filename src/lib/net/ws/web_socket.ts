@@ -11,10 +11,11 @@ import {
     Action,
     ExpressMiddlewareInterface, Interceptor,
     InterceptorInterface,
-    Middleware, RoutingControllersOptions,
+    Middleware, RoutingControllersOptions, useContainer,
     useExpressServer
 } from "routing-controllers";
 import {parseHttpParams} from "../../util/game_util";
+import {Container} from "typedi";
 
 let uid: number = 0;
 const baseWebSocketPath = '/websocket';
@@ -172,6 +173,7 @@ export class Server {
             });
 
             httpServer.listen(this._port, this._host);
+            useContainer(Container);
             if (options) {
                 useExpressServer(app, options);
             }

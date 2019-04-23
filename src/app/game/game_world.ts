@@ -19,6 +19,7 @@ import {IntervalTimer} from "../../lib/util/time";
 import {ConfigMgr} from "../../config/data/config_struct";
 import {rmAll} from "../../lib/util/game_util";
 import {Global} from "../../lib/util/global";
+import {Container} from "typedi";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',
@@ -284,24 +285,19 @@ export class GameWorld extends events.EventEmitter {
                                 arr[i] = arr[i].toLowerCase();
                             }
                         }
-                        const methodName = arr.slice(2, arr.length).join('');
+                        const method = arr.slice(2, arr.length).join('');
                         const module = require('./controllers/' + arr[1].toLowerCase() + '_controller');
                         const moduleClass = module[GameUtil.capitalize(arr[1]) + 'Controller'];
                         if (!moduleClass) {
                             Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller not exists');
                         }
-                        else if (!moduleClass.prototype[methodName]) {
-                            Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller, method=' + methodName + ' not exists');
+                        else if (!moduleClass.prototype[method]) {
+                            Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller, method=' + method + ' not exists');
                         }
                         else {
-                            const className = moduleClass.prototype.constructor.name;
-                            // first inject
-                            if (!module[className]['instance']) {
-                                module[className]['instance'] = new moduleClass();
-                            }
                             this._allControllers[cmd] = {
-                                controller: module[className]['instance'],
-                                action: module[className]['instance'][methodName]
+                                controller: Container.get(moduleClass),
+                                action: Container.get(moduleClass)[method]
                             };
                         }
                     }

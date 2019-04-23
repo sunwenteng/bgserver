@@ -4,9 +4,14 @@ import {BGAction} from "../../../lib/util/descriptor";
 import {Get, JsonController} from "routing-controllers";
 import * as uuid from 'uuid';
 import {EActionCheckType} from "../modles/defines";
+import {Inject} from "typedi";
+import {ResourceService} from "../services/resource_service";
 
 @JsonController('/test')
 export class TestController {
+
+    @Inject()
+    resourceService: ResourceService;
 
     @BGAction(EActionCheckType.noCheck)
     echo(role: Role, msg: C2S.CS_TEST_ECHO) {
@@ -33,6 +38,7 @@ export class TestController {
 
     @Get()
     hello() {
+        this.resourceService.test();
         return 'hello';
     }
 }
