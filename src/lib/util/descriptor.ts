@@ -83,29 +83,6 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
                     await role.save();
                 });
             }
-
-            // let returnValue = null;
-            // if (!readonly) {
-            //     if (lock) {
-            //         returnValue = await RedisMgr.getInstance(RedisType.GAME).lock(role.getRedisKey(), async () => {
-            //             await role.load(mask);
-            //             await originalMethod.apply(this, args);
-            //             role.sendProUpdate();
-            //             await role.save();
-            //         });
-            //     }
-            //     else {
-            //         await role.load(mask);
-            //         await originalMethod.apply(this, args);
-            //         role.sendProUpdate();
-            //         await role.save();
-            //     }
-            // }
-            // else {
-            //     await role.load(mask);
-            //     returnValue = await originalMethod.apply(this, args);
-            // }
-            // return returnValue;
         };
     };
 }
