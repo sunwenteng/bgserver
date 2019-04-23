@@ -149,6 +149,7 @@ export class GameSession extends UserSession {
                 login_device_type: this.role.loginDeviceType
             });
             this._loginKey = result['insertId'];
+            this.isAuthorized = true;
             Log.sInfo('roleId=%d, socketUid=%d, online', this.role.uid, this.socket.uid);
         }
     }
@@ -172,6 +173,7 @@ export class GameSession extends UserSession {
             }
             Log.sInfo('roleId=%d, socketUid=%d, offline', this.role.uid, this.socket.uid);
             this.role.uid = 0;
+            this.isAuthorized = false;
         }
     }
 }

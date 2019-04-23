@@ -46,10 +46,10 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
             if (eCheckType === EActionCheckType.noCheck) {
                 await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
             }
-            else if (eCheckType === EActionCheckType.authedThenInvalid && args[0].role) {
+            else if (eCheckType === EActionCheckType.authedThenInvalid && args[0].isAuthorized) {
                 Log.sWarn('already authorized, duplicate packet, roleId=%d, socketUid=%d', args[0].role.uid, args[0].socket.uid);
             }
-            else if (eCheckType === EActionCheckType.needAuth && !args[0].role) {
+            else if (eCheckType === EActionCheckType.needAuth && !args[0].isAuthorized) {
                 Log.sWarn('not authorized, socketUid=' + this.socket.uid);
             }
             else {

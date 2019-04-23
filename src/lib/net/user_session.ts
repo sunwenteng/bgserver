@@ -9,6 +9,7 @@ export abstract class UserSession extends events.EventEmitter {
     public packets: LinkedList<any>;
     public socket: WebSocket | any;
     public timeLastAlive: number = realNow();
+    public isAuthorized: boolean = false;
 
     protected constructor() {
         super();
