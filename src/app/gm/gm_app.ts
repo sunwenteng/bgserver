@@ -5,7 +5,6 @@ import * as LoginDB from "../../lib/mysql/login_db";
 import {createPidFile, Loop, registerProcessListener} from "../../lib/util/game_util";
 import {initGmCommand, readNewGmCommand, updateGmCommand} from "./gm_mgr";
 import {Global} from "../../lib/util/global";
-// @ts-ignore
 import * as commander from "commander";
 
 async function main() {
