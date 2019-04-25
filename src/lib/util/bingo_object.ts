@@ -1,5 +1,0 @@
-export class BingoObject {
-    constructor() {
-
-    }
-}
