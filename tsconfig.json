@@ -1,11 +1,18 @@
 {
   "compilerOptions": {
     "module": "commonjs",
+    "noImplicitUseStrict": true,
+    "removeComments": true,
+    "noEmitOnError" : true,
     "target": "es2017",
     "sourceMap": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "outDir": "./dist"
   },
+  "include": [
+    "src/**/*"
+  ],
   "exclude": [
     "node_modules"
   ]
