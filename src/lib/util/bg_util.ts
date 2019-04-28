@@ -1,29 +1,43 @@
 /**
  * BGField descriptor must has a default value
+ * @param type
  * @param dynamic
  * @param snapshot
  * @param rankKey
  * @constructor
  */
-import {ByteArray} from "./byte_array";
+import * as ByteBuffer from "bytebuffer";
 
-export function BGField(type?: EBGValueType, dynamic: boolean = false, snapshot: boolean = false, rankKey: any = null) {
+export function BGField(type: EBGValueType, dynamic: boolean = false, snapshot: boolean = false, rankKey: any = null) {
     return (target: Object, key: string): void => {
         Object.defineProperty(target, key, {
             get: function () {
                 return this.__fields[key].value;
             },
             set: function (newValue) {
+                // bind self key in parent field map
+                if (newValue instanceof BGObject) {
+                    newValue.key = key;
+                }
+
+                // first init then register meta info of field
                 if (this.__fields[key] === undefined) {
                     const valueType = typeof newValue;
                     if (!(newValue instanceof BGObject) && valueType !== 'string' && valueType !== 'number' && valueType !== 'boolean') {
                         throw new Error('BGField only be add to number, string or BGObject, key=' + key + ', type=' + valueType);
                     }
-                    this.__fields[key] = {type: type, value: newValue, dirty: EDirtyType.EDT_OK, dynamic: dynamic};
+                    this.__fields[key] = {
+                        type: type,
+                        value: newValue,
+                        dirty: EDirtyType.EDT_OK,
+                        dynamic: dynamic,
+                        uid: ++this.__uid
+                    };
                 }
+                // set dirty flag when value changed
                 else if (this.__fields[key].value !== newValue) {
                     this.__fields[key].value = newValue;
-                    this.__fields[key].dirty = EDirtyType.EDT_DIRTY_MODIFIED;
+                    this.__fields[key].dirty = EDirtyType.EDT_DIRTY_MOD;
                     this.makeDirty();
                 }
             }
@@ -31,14 +45,15 @@ export function BGField(type?: EBGValueType, dynamic: boolean = false, snapshot:
     };
 }
 
-enum EDirtyType {
+export enum EDirtyType {
     EDT_OK = 0,
-    EDT_DIRTY_MODIFIED,     // 增量更新
-    EDT_DIRTY_NEWLY_ADDED   // 全量更新
+    EDT_DIRTY_MOD,     // 增量更新
+    EDT_DIRTY_FULL     // 全量更新
 }
 
 export enum EBGValueType {
-    uint8 = 0,
+    boolean = 0,
+    uint8,
     int8,
     uint16,
     int16,
@@ -47,7 +62,8 @@ export enum EBGValueType {
     uint64,
     int64,
     string,
-    bytes
+    bytes,
+    object
 }
 
 interface IField {
@@ -58,11 +74,54 @@ interface IField {
     uid?: number;
 }
 
+function encodeDefaultType(o: IField, buffer: ByteBuffer) {
+    // write default uid 0
+    buffer.writeUint32(o.uid);
+    switch (o.type) {
+        case EBGValueType.boolean:
+            buffer.writeUint8(o.value ? 1 : 0);
+            break;
+        case EBGValueType.uint8:
+            buffer.writeUint8(o.value as number);
+            break;
+        case EBGValueType.int8:
+            buffer.writeInt8(o.value as number);
+            break;
+        case EBGValueType.uint16:
+            buffer.writeInt16(o.value as number);
+            break;
+        case EBGValueType.int16:
+            buffer.writeUint16(o.value as number);
+            break;
+        case EBGValueType.uint32:
+            buffer.writeUint32(o.value as number);
+            break;
+        case EBGValueType.int32:
+            buffer.writeInt32(o.value as number);
+            break;
+        case EBGValueType.uint64:
+            buffer.writeUint64(o.value as number);
+            break;
+        case EBGValueType.int64:
+            buffer.writeInt64(o.value as number);
+            break;
+        case EBGValueType.string:
+            buffer.writeString(o.value as string);
+            break;
+        case EBGValueType.bytes:
+            buffer.writeBytes(o.value as string);
+            break;
+        default:
+            break;
+    }
+}
+
 export abstract class BGObject {
     protected __fields: { [key: string]: IField } = {};
     protected __dirty: EDirtyType = EDirtyType.EDT_OK;
     protected __key: string = undefined;
     protected __parent: BGObject = null;
+    protected __uid: number = 0;
 
     constructor(parent?: BGObject, key?: string) {
         this.__parent = parent;
@@ -75,6 +134,10 @@ export abstract class BGObject {
 
     set dirty(p: EDirtyType) {
         this.__dirty = p;
+    }
+
+    set key(p: string) {
+        this.__key = p;
     }
 
     dirtyFields(): string[] {
@@ -95,12 +158,12 @@ export abstract class BGObject {
         if (this.__dirty !== EDirtyType.EDT_OK) {
             return;
         }
-        this.__dirty = EDirtyType.EDT_DIRTY_MODIFIED;
+        this.__dirty = EDirtyType.EDT_DIRTY_MOD;
         let parent = this.__parent, self: BGObject = this;
         while (parent && parent.__dirty === EDirtyType.EDT_OK) {
-            parent.__dirty = EDirtyType.EDT_DIRTY_MODIFIED;
+            parent.__dirty = EDirtyType.EDT_DIRTY_MOD;
             if (self.__key !== undefined) {
-                parent.__fields[self.__key].dirty = EDirtyType.EDT_DIRTY_MODIFIED;
+                parent.__fields[self.__key].dirty = EDirtyType.EDT_DIRTY_MOD;
             }
             self = parent;
             parent = parent.__parent;
@@ -124,27 +187,45 @@ export abstract class BGObject {
         }
     }
 
-    encodeFull(buffer: ByteArray) {
+    encodeFull(buffer: ByteBuffer) {
+        // buffer.BE();
         for (let k in this.__fields) {
-            const o = this.__fields[k];
-            if (o instanceof BGObject) {
-                o.encodeFull(buffer);
+            const o: IField = this.__fields[k];
+            if (o.value instanceof BGObject) {
+                o.value.encodeFull(buffer);
             }
             else {
-                if (typeof o === 'string') {
-                    buffer.writeUTF(o);
-                }
-
+                encodeDefaultType(o, buffer);
             }
         }
     }
 
-    encodeDelta(buffer: ByteArray) {
-
-    }
-
-    serializeDirtyData() {
-        // TODO
+    encodeDelta(buffer: ByteBuffer) {
+        let modBuffer = new ByteBuffer();
+        let modCnt = 0;
+        for (let k in this.__fields) {
+            const o: IField = this.__fields[k];
+            if (o.dirty === EDirtyType.EDT_DIRTY_MOD) {
+                ++modCnt;
+                if (o.value instanceof BGObject) {
+                    o.value.encodeDelta(modBuffer);
+                }
+                else {
+                    encodeDefaultType(o, modBuffer);
+                }
+            }
+            else if (o.dirty === EDirtyType.EDT_DIRTY_FULL) {
+                ++modCnt;
+                if (o.value instanceof BGObject) {
+                    o.value.encodeFull(modBuffer);
+                }
+                else {
+                    encodeDefaultType(o, modBuffer);
+                }
+            }
+        }
+        buffer.writeUint32(modCnt);
+        buffer.append(modBuffer);
     }
 }
 
@@ -160,8 +241,8 @@ export class BGMap<T> extends BGObject {
     private _delta: any = {};
     private _length: number = 0;
 
-    constructor(parent: BGObject, key: string, data ?: { [key: string]: T }) {
-        super(parent, key);
+    constructor(parent: BGObject, data ?: { [key: string]: T }) {
+        super(parent);
         if (data) {
             this._data = data;
             this._length = Object.keys(data).length;
@@ -180,7 +261,7 @@ export class BGMap<T> extends BGObject {
     set(k: number | string, v: T) {
         if (v instanceof BGObject) {
             v.parent = this;
-            v.dirty = EDirtyType.EDT_DIRTY_NEWLY_ADDED;
+            v.dirty = EDirtyType.EDT_DIRTY_FULL;
         }
 
         if (this._data[k] === undefined) {
@@ -261,10 +342,11 @@ export class BGMap<T> extends BGObject {
 
 export class BGArray<T extends BGObject | string | number> extends BGObject {
     private _array: T[] = [];
-    private _delta: any = {};
+    private _binlogCnt: number = 0;
+    private _binlog: ByteBuffer = null;
 
-    constructor(parent: BGObject, key: string, data ?: T[]) {
-        super(parent, key);
+    constructor(parent: BGObject, data ?: T[]) {
+        super(parent);
         if (data) {
             this._array.concat(data);
         }
@@ -282,7 +364,7 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
     insert(pos: number, e: T) {
         if (e instanceof BGObject) {
             e.parent = this;
-            e.dirty = EDirtyType.EDT_DIRTY_NEWLY_ADDED;
+            e.dirty = EDirtyType.EDT_DIRTY_FULL;
         }
         if (pos === this._array.length) {
             this._array.push(e);
@@ -291,7 +373,7 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
             this.checkPos(pos);
             this._array = this._array.slice(0, pos).concat([e, ...this._array.slice(pos)]);
         }
-        this.updateDelta(EDeltaOpt.INSERT, pos);
+        this.addBinlog(EDeltaOpt.INSERT, pos);
         return this;
     }
 
@@ -305,7 +387,7 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
 
     clear() {
         for (let i = 0; i < this._array.length; ++i) {
-            this.updateDelta(EDeltaOpt.DELETE, i);
+            this.addBinlog(EDeltaOpt.DELETE, i);
         }
         this._array = [];
     }
@@ -321,7 +403,7 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
         }
 
         this._array.splice(pos, 1);
-        this.updateDelta(EDeltaOpt.DELETE, pos);
+        this.addBinlog(EDeltaOpt.DELETE, pos);
         return this;
     }
 
@@ -334,7 +416,7 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
         this.checkPos(pos);
         if (v instanceof BGObject) {
             v.parent = this;
-            v.dirty = EDirtyType.EDT_DIRTY_NEWLY_ADDED;
+            v.dirty = EDirtyType.EDT_DIRTY_FULL;
         }
         this._array[pos] = v;
         this.makeDirty();
@@ -346,18 +428,20 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
         }
     }
 
-    private updateDelta(opt: EDeltaOpt, pos?: number) {
+    private addBinlog(opt: EDeltaOpt, pos?: number) {
         this.makeDirty();
 
-        // TODO
-        if (!this._delta[opt]) {
-            this._delta[opt] = [];
+        if (!this._binlog) {
+            this._binlog = new ByteBuffer();
         }
+
+        ++this._binlogCnt;
 
         switch (opt) {
             case EDeltaOpt.DELETE:
-                break;
             case EDeltaOpt.INSERT:
+                this._binlog.writeUint32(opt);
+                this._binlog.writeUint32(pos);
                 break;
             default:
                 break;
@@ -369,10 +453,21 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
             return;
         }
         this.__dirty = EDirtyType.EDT_OK;
+        this._binlog.clear();
+        this._binlogCnt = 0;
         for (let i of this._array) {
             if (i instanceof BGObject) {
                 i.clearDirty();
             }
+        }
+    }
+
+    encodeFull(buffer: ByteBuffer) {
+        // buffer.BE();
+        buffer.writeUint32(this._array.length);
+        buffer.writeUint32(0);
+        for (let o of this._array) {
+            // buffer.writeUint32();
         }
     }
 }

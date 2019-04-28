@@ -1,6 +1,7 @@
 import {expect} from 'chai';
 import 'mocha';
-import {BGArray, BGField, BGMap, BGObject, EBGValueType} from "../lib/util/bg_util";
+import {BGArray, BGField, BGMap, BGObject, EBGValueType, EDirtyType} from "../lib/util/bg_util";
+import * as ByteBuffer from "bytebuffer";
 
 describe('bg_util', () => {
     class Other {
@@ -20,8 +21,8 @@ describe('bg_util', () => {
     class TestInner extends BGObject {
         @BGField(EBGValueType.uint32) uid: number = 0;
         @BGField(EBGValueType.uint32) test: number = 0;
-        @BGField() array: BGArray<TestInnest> = new BGArray<TestInnest>(this, 'array');
-        @BGField() arrayInt: BGArray<number> = new BGArray<number>(this, 'arrayInt');
+        @BGField(EBGValueType.object) array: BGArray<TestInnest> = new BGArray<TestInnest>(this);
+        @BGField(EBGValueType.uint8) arrayInt: BGArray<number> = new BGArray<number>(this);
 
         constructor(uid, test) {
             super();
@@ -34,8 +35,8 @@ describe('bg_util', () => {
     class Role extends BGObject {
         @BGField(EBGValueType.uint32) uid: number = 0;
         @BGField(EBGValueType.string) name: string = '';
-        @BGField(EBGValueType.uint8) valid: boolean = true;
-        @BGField() timeMap: BGMap<TestInner> = new BGMap<TestInner>(this, 'timeMap');
+        @BGField(EBGValueType.boolean) valid: boolean = true;
+        @BGField(EBGValueType.object) timeMap: BGMap<TestInner> = new BGMap<TestInner>(this);
     }
 
     it('1', () => {
@@ -45,10 +46,23 @@ describe('bg_util', () => {
         role.valid = false;
         expect(role.dirtyFields()).deep.eq(['uid', 'name', 'valid']);
 
+        let buffer = new ByteBuffer();
+        let buffer1 = new ByteBuffer();
+        buffer.writeUint32(1);
+        buffer1.writeUint32(1);
+        buffer = buffer1.copyTo(buffer, buffer.offset, 0, buffer1.offset);
+        buffer.offset += buffer1.offset + 30;
+        buffer.writeUint32(10000000);
+        console.log(`${buffer.offset} ${buffer.limit}`);
+        role.encodeFull(buffer);
+        console.log(`${buffer.offset} ${buffer.limit}`);
+        role.encodeDelta(buffer);
+        console.log(`${buffer.offset} ${buffer.limit}`);
+
         role.clearDirty();
         expect(role.dirtyFields().length).eq(0);
 
-        role.timeMap = new BGMap<TestInner>(role, 'timeMap', {0: new TestInner(0, 0)});
+        role.timeMap = new BGMap<TestInner>(role, {0: new TestInner(0, 0)});
         role.timeMap.set(1, new TestInner(1, 1));
         role.timeMap.set(1, new TestInner(1, 2));
         role.timeMap.set(2, new TestInner(2, 2));
