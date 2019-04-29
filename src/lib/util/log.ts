@@ -73,7 +73,7 @@ export class Log {
         let file = new winston.transports.DailyRotateFile({
                 filename: filePrefix,
                 datePattern: 'YYYY-MM-DD',
-                maxFiles: '30d',
+                /*maxFiles: '30d',*/
                 dirname: dirName ? dirName : './log',
                 timestamp: () => {
                     return moment().format('YYYY-MM-DD HH:mm:ss');

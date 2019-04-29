@@ -41,23 +41,17 @@ describe('bg_util', () => {
 
     it('1', () => {
         let role = new Role();
+        let buffer = new ByteBuffer();
+        role.encodeFull(buffer);
+        buffer.clear();
+
         role.uid = 1;
         role.name = '123';
         role.valid = false;
         expect(role.dirtyFields()).deep.eq(['uid', 'name', 'valid']);
 
-        let buffer = new ByteBuffer();
-        let buffer1 = new ByteBuffer();
-        buffer.writeUint32(1);
-        buffer1.writeUint32(1);
-        buffer = buffer1.copyTo(buffer, buffer.offset, 0, buffer1.offset);
-        buffer.offset += buffer1.offset + 30;
-        buffer.writeUint32(10000000);
-        console.log(`${buffer.offset} ${buffer.limit}`);
-        role.encodeFull(buffer);
-        console.log(`${buffer.offset} ${buffer.limit}`);
         role.encodeDelta(buffer);
-        console.log(`${buffer.offset} ${buffer.limit}`);
+        buffer.clear();
 
         role.clearDirty();
         expect(role.dirtyFields().length).eq(0);
@@ -67,6 +61,9 @@ describe('bg_util', () => {
         role.timeMap.set(1, new TestInner(1, 2));
         role.timeMap.set(2, new TestInner(2, 2));
         role.timeMap.set(3, new TestInner(3, 3));
+
+        role.encodeDelta(buffer);
+        buffer.clear();
 
         expect(role.timeMap.length).eq(4);
         role.timeMap.remove(0).remove(2);
