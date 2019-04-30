@@ -28,8 +28,8 @@ export async function start(config: MysqlConfig): Promise<void> {
                 [tableName, ...c]
             ]);
         }
-        Global.playerInfoMysqlColumn = [];
     }
+    Global.playerInfoMysqlColumn = [];
 
     // 全局（分服）数据
     tableName = 'global';

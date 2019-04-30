@@ -13,6 +13,7 @@ import {GM_TYPE} from "../../gm/gm_struct";
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
 import {BGField, BGObject, EBGValueType, EDirtyType} from "../../../lib/util/bg_util";
+import {Item, ItemModel} from "./item_model";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';
@@ -63,11 +64,15 @@ export class Role extends BGObject {
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true) vipExp: number = 0;
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) vipLevel: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) guildId: number = 0;
+    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.boolean, true, true) valid: boolean = false;
+
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true, true) itemModel: ItemModel = new ItemModel(this);
 
     constructor(uid: number, session?: GameSession) {
         super();
         this._session = session;
         this.uid = uid;
+        this.clearDirty();
     }
 
     public static getRedisKey(uid: number | string) {
@@ -75,7 +80,7 @@ export class Role extends BGObject {
     }
 
     public async save(bSaveAll: boolean = false, bSync2Login: boolean = false): Promise<void> {
-        let saveData = this.serialize(bSaveAll);
+        let saveData = this.encodeDB(bSaveAll);
         if (Object.keys(saveData).length === 0) {
             return;
         }
@@ -105,35 +110,6 @@ export class Role extends BGObject {
         await Role.saveRoleSummary(this.uid, msg);
     }
 
-    public deserialize(reply: { [key: string]: any }): void {
-        for (let k in reply) {
-            let o = reply[k];
-            if (typeof o === 'string') {
-                try {
-                    reply[k] = JSON.parse(o);
-                }
-                catch (e) {
-                    Log.uError(this.uid, e);
-                }
-            }
-        }
-        this.fromObject(reply);
-    }
-
-    public serialize(bAll?: boolean): { [key: string]: any } {
-        if (!bAll && this.dirty === EDirtyType.EDT_OK) {
-            return;
-        }
-        let reply = this.toObject(bAll);
-        for (let k in reply) {
-            let o = reply[k];
-            if (typeof o === 'object') {
-                reply[k] = JSON.stringify(o);
-            }
-        }
-        return reply;
-    }
-
     public async load(): Promise<boolean> {
         return new Promise<boolean>(async (resolve) => {
             if (!this.uid || this.uid === 0) {
@@ -156,19 +132,14 @@ export class Role extends BGObject {
                                 throw new Error('role column ' + f + ' not in db');
                             }
                         }
-                        this.deserialize(result[0]);
-                        await RedisMgr.getInstance(RedisType.GAME).hmset(key, this.serialize(true), ROLE_REDIS_EXPIRE_TIME);
+                        this.decodeDB(result[0]);
+                        await RedisMgr.getInstance(RedisType.GAME).hmset(key, this.encodeDB(true), ROLE_REDIS_EXPIRE_TIME);
                         resolve(true);
                     }
                 }
                 // 缓存命中
                 else {
-                    for (let f of queryField) {
-                        if (!reply[f]) {
-                            reply[f] = '';
-                        }
-                    }
-                    this.deserialize(reply);
+                    this.decodeDB(reply);
                     resolve(true);
                 }
             }
@@ -183,14 +154,18 @@ export class Role extends BGObject {
         this.level = 1;
         // TODO
 
+        this.itemModel.itemMap.set(1, new Item(1, 1, 1));
+        this.itemModel.itemMap.set(2, new Item(2, 2, 1));
+        this.itemModel.itemMap.set(3, new Item(3, 3, 1));
         this.computeCombat();
 
-        let result = await LoginDB.conn.execute(`select status from ip_status where ip like "%${this._session.socket.ip}%"`);
-        if (result.length > 0) {
-            this.state = result[0].status;
-        }
+        // deprecated ban role create from ip
+        // let result = await LoginDB.conn.execute(`select status from ip_status where ip like "%${this._session.socket.ip}%"`);
+        // if (result.length > 0) {
+        //     this.state = result[0].status;
+        // }
 
-        await WorldDB.conn.execute('insert into player_info_' + this.getTableNum() + ' set ?', this.serialize(true));
+        await WorldDB.conn.execute('insert into player_info_' + this.getTableNum() + ' set ?', this.encodeDB(true));
         this.clearDirty();
     }
 

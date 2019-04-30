@@ -293,6 +293,30 @@ export abstract class BGObject {
             }
         }
     }
+
+    public decodeDB(reply: { [key: string]: any }): void {
+        for (let k in reply) {
+            let o = reply[k];
+            if (typeof o === 'string') {
+                reply[k] = JSON.parse(o);
+            }
+        }
+        this.fromObject(reply);
+    }
+
+    public encodeDB(bAll?: boolean): { [key: string]: any } {
+        if (!bAll && this.dirty === EDirtyType.EDT_OK) {
+            return;
+        }
+        let reply = this.toObject(bAll);
+        for (let k in reply) {
+            let o = reply[k];
+            if (typeof o === 'object' || typeof o === 'string') {
+                reply[k] = JSON.stringify(o);
+            }
+        }
+        return reply;
+    }
 }
 
 enum EDeltaOpt {
@@ -373,9 +397,9 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
     remove(k: number | string) {
         if (this._data[k] !== undefined) {
             this.addBinlog(EDeltaOpt.DELETE, k);
+            delete this._data[k];
+            --this._length;
         }
-        delete this._data[k];
-        --this._length;
         return this;
     }
 
@@ -497,6 +521,7 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
                 let t = new this._typeT();
                 (t as BGObject).fromObject(d);
                 this._data[k] = t;
+                this._length++;
             }
             else {
                 this._data[k] = d;

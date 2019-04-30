@@ -27,7 +27,7 @@ export function execTime(bToLog: boolean = true) {
                 Log.sInfo('time consumed: ' + this.constructor.name + ':' + methodName + ': ' + (end - start) + 'ms');
             }
             else {
-                console.log('time consumed: ' + this.constructor.name + ':' + methodName + ': ' + (end - start) + 'ms');
+                console.log('\ntime consumed: ' + this.constructor.name + ':' + methodName + ': ' + (end - start) + 'ms');
             }
             return returnValue;
         };

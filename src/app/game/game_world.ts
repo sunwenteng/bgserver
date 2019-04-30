@@ -10,7 +10,6 @@ import * as events from "events";
 import * as time from '../../lib/util/time';
 import * as LoginDB from "../../lib/mysql/login_db";
 import * as WorldDB from "../../lib/mysql/world_db";
-import {Model} from "./modles/model";
 import {BMap, GlobalKeyType, GM_RES_RELOAD_FLAG} from "./modles/defines";
 import {realNow} from "../../lib/util/time";
 import {GameSession} from "./game_session";
@@ -20,6 +19,7 @@ import {ConfigMgr} from "../../config/data/config_struct";
 import {rmAll} from "../../lib/util/game_util";
 import {Global} from "../../lib/util/global";
 import {Container} from "typedi";
+import {BGObject} from "../../lib/util/bg_util";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',
@@ -583,35 +583,27 @@ export class GameWorld extends events.EventEmitter {
         return this._allControllers[cmd].controller;
     }
 
-    private async loadGlobalData<T extends Model>(serverId: number, globalKey: GlobalKeyType, globalDataType: new () => T): Promise<any> {
-        return new Promise<any>(async resolve => {
-            let data = await RedisMgr.getInstance(RedisType.GAME).get(globalKey.redis + '_' + serverId);
-            let globalData = new globalDataType();
-            if (!data) {
-                let ret = await WorldDB.conn.execute('select data from global where server_id=? and key_id= ?',
-                    [serverId, globalKey.db]);
-                if (ret.length === 0) {
-                    await WorldDB.conn.execute('insert into global set ?', {
-                        data: globalData.serialize(),
-                        key_id: globalKey.db,
-                        server_id: serverId,
-                    });
-                }
-                else if (ret[0].data !== null) {
-                    globalData.deserialize(ret[0].data.toString());
-                }
-
-                await RedisMgr.getInstance(RedisType.GAME).set(globalKey.redis + '_' + serverId, globalData.serialize());
-                Log.sInfo(globalKey.db + ' load success');
+    private async loadGlobalData<T extends BGObject>(serverId: number, globalKey: GlobalKeyType, globalDataType: new () => T): Promise<T> {
+        let data = await RedisMgr.getInstance(RedisType.GAME).get(globalKey.redis + '_' + serverId);
+        let globalData = new globalDataType();
+        if (!data) {
+            let ret = await WorldDB.conn.execute('select data from global where server_id=? and key_id= ?',
+                [serverId, globalKey.db]);
+            if (ret.length === 0) {
+                return globalData;
             }
-            else {
-                globalData.deserialize(data);
+            else if (ret[0].data !== null) {
+                globalData.fromObject(JSON.parse(ret[0].data.toString()));
             }
-            resolve(globalData);
-        });
+            Log.sInfo(globalKey.db + ' load success');
+        }
+        else {
+            globalData.fromObject(JSON.parse(data));
+        }
+        return globalData;
     }
 
-    public async loadGlobalDataAndDo<T extends Model>(serverOrGroupId: number, globalKey: GlobalKeyType, globalDataType: new () => T, cb: (globalData: T) => void, readonly: boolean = false) {
+    public async loadGlobalDataAndDo<T extends BGObject>(serverOrGroupId: number, globalKey: GlobalKeyType, globalDataType: new () => T, cb: (globalData: T) => void, readonly: boolean = false) {
         if (!globalKey) {
             throw new Error(globalKey + ' not exist');
         }
@@ -628,7 +620,7 @@ export class GameWorld extends events.EventEmitter {
         }
     }
 
-    public async saveGlobalData<T extends Model>(serverOrGroupId: number, globalKey: GlobalKeyType, globalDataType: new () => T, bForce: boolean = false) {
+    public async saveGlobalData<T extends BGObject>(serverOrGroupId: number, globalKey: GlobalKeyType, globalDataType: new () => T, bForce: boolean = false) {
         if (!globalKey) {
             throw new Error(globalKey + ' not exist');
         }
@@ -638,12 +630,10 @@ export class GameWorld extends events.EventEmitter {
             if (hasLock) {
                 let data = await RedisMgr.getInstance(RedisType.GAME).get(redisKey);
                 if (data) {
-                    let globalData = new globalDataType();
-                    globalData.deserialize(data);
                     await WorldDB.conn.execute('insert into global set ? on duplicate key update ?',
                         [
-                            {data: globalData.serialize(), key_id: globalKey.db, server_id: serverOrGroupId},
-                            {data: globalData.serialize(), key_id: globalKey.db, server_id: serverOrGroupId}
+                            {data: data, key_id: globalKey.db, server_id: serverOrGroupId},
+                            {data: data, key_id: globalKey.db, server_id: serverOrGroupId}
                         ]);
                     Log.sInfo(globalKey.db + ' save success');
                 }

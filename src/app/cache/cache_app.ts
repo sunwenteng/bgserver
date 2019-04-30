@@ -37,7 +37,7 @@ async function main() {
                                     obj = JSON.parse(data);
                                 let role = new Role(parseInt(uid));
                                 await RedisMgr.getInstance(RedisType.GAME).lock(Role.getRedisKey(role.uid), async () => {
-                                    role.deserialize(obj);
+                                    role.decodeDB(obj);
                                     await role.save(true);
                                     Log.sInfo(`role ${uid} back to time ${infoArray[0]} based on file ${file}`);
                                 });
@@ -88,7 +88,7 @@ async function main() {
                 else {
                     try {
                         Log.sInfo('start saving roleKey=' + roleId);
-                        let data = role.serialize(true);
+                        let data = role.encodeDB(true);
                         Log.uInfo(role.uid, 'snapshotId=' + realNow() + ', data=' + JSON.stringify(data));
                         await WorldDB.conn.execute('update player_info_' + role.getTableNum() + ' set ? where ?', [data, {uid: role.uid}]);
                         await role.syncDataToLogin();
