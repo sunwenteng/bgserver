@@ -1,9 +1,7 @@
 import {Log} from "./log";
 import {Role} from "../../app/game/modles/role";
 import {RedisMgr, RedisType} from "../redis/redis_mgr";
-import {RoleModel} from "../../app/game/modles/role_model";
 import {GameWorld, WorldDataRedisKey} from "../../app/game/game_world";
-import {C2S, S2C} from "../../app/proto/cmd";
 import {EActionCheckType, EMysqlValueType} from "../../app/game/modles/defines";
 import {Global} from "./global";
 
@@ -81,6 +79,9 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
                      */
                     await role.notify();
                     await role.save();
+                    // role.save().catch((e) => {
+                    //     Log.uError(role.uid, e);
+                    // });
                 });
             }
         };
@@ -88,7 +89,7 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
 }
 
 /**
- * runtime 不损耗性能，服务启动时注册
+ * orm to mysql player_info_*(player_info might be split to different tables)
  * @param type
  * @param len
  * @constructor
@@ -122,105 +123,5 @@ export function BGMysql(type: EMysqlValueType, len?: number) {
                 throw new Error('not support type=' + type);
         }
         Global.playerInfoMysqlColumn.push([key, dbString]);
-    };
-}
-
-/**
- *
- * @param {boolean} dynamic true时，属性被修改会自动发包给客户端
- * @param {boolean} summary true时，属性被修改会自动存入redis供其他玩家查看快照信息
- * @param {C2S.ERankType} rankType 绑定时，属性修改会自动更新对应排行榜
- * @returns {(target: Object, key: string) => void}
- */
-export function BGField(dynamic: boolean = false, summary: boolean = false, rankType?: C2S.ERankType) {
-    return (target: Object, key: string): void => {
-        Object.defineProperty(target, key, {
-            get: function () {
-                if (this['fields'][key] instanceof RoleModel && !this['fields'][key].loaded) {
-                    throw new Error(key + ' not loaded, pls loaded first');
-                }
-                return this['fields'][key];
-            },
-            set: function (newValue) {
-                // 首次定义
-                if (!this['fields'].hasOwnProperty(key)) {
-                    if (rankType !== undefined && rankType !== null) {
-                        this['revRankFields'][rankType] = key;
-                    }
-                    if (process.env.NODE_ENV !== 'production') {
-                        if (dynamic) {
-                            let msg = S2C.SC_UPDATE_ROLE_PRO.create();
-                            if (!msg.constructor.prototype.hasOwnProperty(key)) {
-                                throw new Error('SC_ROLE_PRO_UPDATE has no property, key=' + key);
-                            }
-                        }
-                        if (summary) {
-                            let msg = S2C.RoleSummary.create();
-                            if (!msg.constructor.prototype.hasOwnProperty(key)) {
-                                throw new Error('SC_ROLE_SUMMARY has no property, key=' + key);
-                            }
-                        }
-                    }
-                }
-                else if (this['fields'][key] !== newValue) {
-                    if (dynamic) {
-                        this['dynamicFields'][key] = null;
-                    }
-                    if (rankType !== undefined) {
-                        this['rankFields'][key] = rankType;
-                    }
-                    if (summary) {
-                        this['isSummaryDirty'] = true;
-                    }
-                    this['dirtyFields'][key] = null;
-                }
-                this['fields'][key] = newValue;
-            }
-        });
-    };
-}
-
-export function modelField() {
-    return (target: Object, key: string): void => {
-        Object.defineProperty(target, key, {
-            get: function () {
-                return this['fields'][key];
-            },
-            set: function (newValue) {
-                if (this['fields'][key] !== newValue) {
-                    this['makeDirty']();
-                }
-                this['fields'][key] = newValue;
-            }
-        });
-    };
-}
-
-export function field() {
-    return (target: Object, key: string): void => {
-        Object.defineProperty(target, key, {
-            get: function () {
-                return this['fields'][key];
-            },
-            set: function (newValue) {
-                this['fields'][key] = newValue;
-            }
-        });
-    };
-}
-
-export function dirtyField() {
-    return (target: Object, key: string): void => {
-        Object.defineProperty(target, key, {
-            get: function () {
-                return this['fields'][key];
-            },
-            set: function (newValue) {
-                if (this['fields'].hasOwnProperty(key) && this['fields'][key] !== newValue) {
-                    this['dirtyFields'][key] = null;
-                }
-                this['fields'][key] = newValue;
-            }
-        });
     };
 }

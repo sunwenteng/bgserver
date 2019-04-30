@@ -37,8 +37,14 @@ export class TestController {
     }
 
     @Get()
-    hello() {
+    async hello() {
+        console.log(1);
         this.resourceService.test();
+        let role = new Role(1);
+        await role.create('haha');
+        await role.save(true);
+        let roleB = new Role(1);
+        await roleB.load();
         return 'hello';
     }
 }

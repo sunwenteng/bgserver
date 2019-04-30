@@ -1,6 +1,6 @@
 import {expect} from 'chai';
 import 'mocha';
-import {BGArray, BGField, BGMap, BGObject, EBGValueType, EDirtyType} from "../lib/util/bg_util";
+import {BGArray, BGField, BGMap, BGObject, EBGValueType} from "../lib/util/bg_util";
 import * as ByteBuffer from "bytebuffer";
 
 describe('bg_util', () => {
@@ -21,8 +21,8 @@ describe('bg_util', () => {
     class TestInner extends BGObject {
         @BGField(EBGValueType.uint32) uid: number = 0;
         @BGField(EBGValueType.uint32) test: number = 0;
-        @BGField(EBGValueType.object) array: BGArray<TestInnest> = new BGArray<TestInnest>(this);
-        @BGField(EBGValueType.uint8) arrayInt: BGArray<number> = new BGArray<number>(this);
+        @BGField(EBGValueType.object) array: BGArray<TestInnest> = new BGArray(this, TestInnest);
+        @BGField(EBGValueType.uint8) arrayInt: BGArray<number> = new BGArray(this);
 
         constructor(uid, test) {
             super();
@@ -36,7 +36,7 @@ describe('bg_util', () => {
         @BGField(EBGValueType.uint32) uid: number = 0;
         @BGField(EBGValueType.string) name: string = '';
         @BGField(EBGValueType.boolean) valid: boolean = true;
-        @BGField(EBGValueType.object) timeMap: BGMap<TestInner> = new BGMap<TestInner>(this);
+        @BGField(EBGValueType.object) timeMap: BGMap<TestInner> = new BGMap(this, TestInner);
     }
 
     it('1', () => {
@@ -56,7 +56,7 @@ describe('bg_util', () => {
         role.clearDirty();
         expect(role.dirtyFields().length).eq(0);
 
-        role.timeMap = new BGMap<TestInner>(role, {0: new TestInner(0, 0)});
+        role.timeMap = new BGMap(role, TestInner, {0: new TestInner(0, 0)});
         role.timeMap.set(1, new TestInner(1, 1));
         role.timeMap.set(1, new TestInner(1, 2));
         role.timeMap.set(2, new TestInner(2, 2));
@@ -108,6 +108,8 @@ describe('bg_util', () => {
         role.timeMap.get(1).arrayInt.push(1);
         role.timeMap.get(1).arrayInt.push(2);
         role.timeMap.get(1).arrayInt.push(3);
+        // buffer.clear();
+        // role.encodeDelta(buffer);
 
         expect(role.dirtyFields()).deep.eq(['timeMap']);
         role.clearDirty();
@@ -115,6 +117,13 @@ describe('bg_util', () => {
         role.timeMap.get(1).arrayInt.set(0, 4);
         expect(role.timeMap.get(1).arrayInt.get(0)).eq(4);
         expect(role.dirtyFields()).deep.eq(['timeMap']);
+
+        let a = role.toObject(true);
+        let roleB = new Role();
+        roleB.fromObject(a);
+        let b = roleB.toObject(true);
+        expect(roleB.dirtyFields()).deep.eq([]);
+        expect(a).deep.eq(b);
 
         expect(role.timeMap.clear().length).eq(0);
     });

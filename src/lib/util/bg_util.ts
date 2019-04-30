@@ -197,6 +197,11 @@ export abstract class BGObject {
         }
     }
 
+    /**
+     * interact with client
+     * @param buffer
+     * @param selfUid
+     */
     encodeFull(buffer: ByteBuffer, selfUid?: number) {
         if (selfUid !== undefined) {
             buffer.writeUint32(selfUid);
@@ -214,6 +219,11 @@ export abstract class BGObject {
         this.clearDirty();
     }
 
+    /**
+     * interact with client
+     * @param buffer
+     * @param selfUid
+     */
     encodeDelta(buffer: ByteBuffer, selfUid?: number) {
         if (this.__dirty === EDirtyType.EDT_OK) {
             return;
@@ -248,6 +258,41 @@ export abstract class BGObject {
         buffer.append(modBuffer.slice(0, modBuffer.offset));
         this.clearDirty();
     }
+
+    toObject(bAll?: boolean): { [key: string]: any } {
+        let reply: { [key: string]: any } = {};
+        for (let k in this.__fields) {
+            let o: IField = this.__fields[k];
+            if (!bAll && o.dirty === EDirtyType.EDT_OK) {
+                continue;
+            }
+            if (o.value instanceof BGObject) {
+                reply[k] = o.value.toObject(bAll);
+            }
+            else {
+                reply[k] = o.value;
+            }
+        }
+        return reply;
+    }
+
+    fromObject(reply: { [key: string]: any }): void {
+        for (let k in reply) {
+            let d = reply[k];
+            let o = this.__fields[k];
+            if (!o) {
+                console.warn(`${k} is missing with in fields`);
+                continue;
+            }
+
+            if (o.type === EBGValueType.object) {
+                (o.value as BGObject).fromObject(d);
+            }
+            else {
+                o.value = d;
+            }
+        }
+    }
 }
 
 enum EDeltaOpt {
@@ -257,15 +302,25 @@ enum EDeltaOpt {
     UPDATE_FULL = 4,
 }
 
-export class BGMap<T extends BGObject | number | string> extends BGObject {
+export class BGMap<T extends BGObject | string | number> extends BGObject {
     private _data: { [key: string]: T } = {};
     private _valueT: EBGValueType = undefined;
-    private _length: number = 0;
+    private _typeT: (new () => T) = undefined;
     private _binlogCnt: number = 0;
     private _binlog: ByteBuffer = new ByteBuffer();
+    private _length: number = 0;
 
-    constructor(parent: BGObject, data ?: { [key: string]: T }) {
+    /**
+     * @param parent
+     * @param type must be (new () => T), Function type is just for compile through
+     * @param data
+     */
+    constructor(parent: BGObject, type?: (new () => T) | Function, data ?: { [key: string]: T }) {
         super(parent);
+        if (type) {
+            this._typeT = type as (new () => T);
+        }
+
         if (data) {
             for (let k in data) {
                 this.set(k, data[k]);
@@ -328,19 +383,6 @@ export class BGMap<T extends BGObject | number | string> extends BGObject {
         return Object.entries(this._data);
     }
 
-    clearDirty() {
-        if (this.__dirty === EDirtyType.EDT_OK) {
-            return;
-        }
-        this.__dirty = EDirtyType.EDT_OK;
-        for (let i in this._data) {
-            let v = this._data[i];
-            if (v instanceof BGObject) {
-                v.clearDirty();
-            }
-        }
-    }
-
     clear() {
         for (let k in this._data) {
             delete this._data[k];
@@ -371,6 +413,19 @@ export class BGMap<T extends BGObject | number | string> extends BGObject {
         }
     }
 
+    clearDirty() {
+        if (this.__dirty === EDirtyType.EDT_OK) {
+            return;
+        }
+        this.__dirty = EDirtyType.EDT_OK;
+        for (let i in this._data) {
+            let v = this._data[i];
+            if (v instanceof BGObject) {
+                v.clearDirty();
+            }
+        }
+    }
+
     encodeFull(buffer: ByteBuffer, selfUid?: number) {
         if (selfUid !== undefined) {
             buffer.writeUint32(selfUid);
@@ -383,7 +438,234 @@ export class BGMap<T extends BGObject | number | string> extends BGObject {
                 o.encodeFull(buffer, 0);
             }
             else {
-                encodeDefaultType({value: o, type: this._valueT, uid: 0, dirty: EDirtyType.EDT_DIRTY_FULL}, buffer);
+                encodeDefaultType({
+                    value: o,
+                    type: this._valueT as EBGValueType,
+                    uid: 0,
+                    dirty: EDirtyType.EDT_DIRTY_FULL
+                }, buffer);
+            }
+        }
+        this.clearDirty();
+    }
+
+    encodeDelta(buffer: ByteBuffer, selfUid?: number) {
+        if (selfUid !== undefined) {
+            buffer.writeUint32(selfUid);
+        }
+
+        if (typeof this._valueT === 'function') {
+            for (let k in this._data) {
+                let value = this._data[k] as BGObject;
+                if (value.dirty === EDirtyType.EDT_DIRTY_FULL) {
+                    ++this._binlogCnt;
+                    this._binlog.writeUint32(EDeltaOpt.UPDATE_FULL);
+                    this._binlog.writeString(k);
+                    value.encodeFull(this._binlog, 0);
+                }
+                else if (value.dirty === EDirtyType.EDT_DIRTY_MOD) {
+                    ++this._binlogCnt;
+                    this._binlog.writeUint32(EDeltaOpt.UPDATE_DELTA);
+                    this._binlog.writeString(k);
+                    value.encodeDelta(this._binlog, 0);
+                }
+            }
+        }
+        buffer.writeUint32(this._binlogCnt);
+        buffer.append(this._binlog.slice(0, this._binlog.offset));
+        this.clearDirty();
+    }
+
+    toObject(): { [key: string]: any } {
+        let reply: { [key: string]: any } = {};
+        for (let k in this._data) {
+            let d = this._data[k];
+            if (this._valueT === EBGValueType.object) {
+                reply[k] = (d as BGObject).toObject(true);
+            }
+            else {
+                reply[k] = d;
+            }
+        }
+        return reply;
+    }
+
+    fromObject(reply: { [key: string]: any }): void {
+        for (let k in reply) {
+            let d = reply[k];
+            if (this._valueT === EBGValueType.object) {
+                let t = new this._typeT();
+                (t as BGObject).fromObject(d);
+                this._data[k] = t;
+            }
+            else {
+                this._data[k] = d;
+            }
+        }
+    }
+}
+
+export class BGArray<T extends BGObject | string | number> extends BGObject {
+    private _data: T[] = [];
+    private _valueT: EBGValueType = undefined;
+    private _typeT: (new () => T) = undefined;
+    private _binlogCnt: number = 0;
+    private _binlog: ByteBuffer = new ByteBuffer();
+
+    /**
+     * @param parent
+     * @param type must be (new () => T), Function type is just for compile through
+     * @param data
+     */
+    constructor(parent: BGObject, type?: (new () => T) | Function, data ?: T[]) {
+        super(parent);
+        if (type) {
+            this._typeT = type as (new () => T);
+        }
+
+        if (data) {
+            for (let a of data) {
+                this.push(a);
+            }
+        }
+    }
+
+    set valueT(p: EBGValueType) {
+        this._valueT = p;
+    }
+
+    push(e: T) {
+        this.insert(this._data.length, e);
+        return this;
+    }
+
+    get length() {
+        return this._data.length;
+    }
+
+    insert(pos: number, e: T) {
+        if (e instanceof BGObject) {
+            e.parent = this;
+            e.dirty = EDirtyType.EDT_DIRTY_FULL;
+        }
+        if (pos === this._data.length) {
+            this._data.push(e);
+        }
+        else {
+            this.checkPos(pos);
+            this._data = this._data.slice(0, pos).concat([e, ...this._data.slice(pos)]);
+        }
+        this.addBinlog(EDeltaOpt.INSERT, pos);
+        return this;
+    }
+
+    find() {
+
+    }
+
+    findIndex() {
+
+    }
+
+    clear() {
+        for (let i = 0; i < this._data.length; ++i) {
+            this.addBinlog(EDeltaOpt.DELETE, i);
+        }
+        this._data = [];
+    }
+
+    // removeByValue(v: T) {
+    //     let idx = this.indexOf(v);
+    //     this.remove(idx);
+    // }
+
+    remove(pos: number) {
+        if (pos < 0 || pos >= this._data.length) {
+            return;
+        }
+
+        this._data.splice(pos, 1);
+        this.addBinlog(EDeltaOpt.DELETE, pos);
+        return this;
+    }
+
+    get(pos: number): T {
+        this.checkPos(pos);
+        return this._data[pos];
+    }
+
+    set(pos: number, v: T) {
+        this.checkPos(pos);
+        if (v instanceof BGObject) {
+            v.parent = this;
+            v.dirty = EDirtyType.EDT_DIRTY_FULL;
+        }
+        else {
+            if (v === this._data[pos]) {
+                return;
+            }
+            else {
+                this.addBinlog(EDeltaOpt.UPDATE_FULL, pos);
+            }
+        }
+        this._data[pos] = v;
+        this.makeDirty();
+    }
+
+    private checkPos(pos: number) {
+        if (pos >= this._data.length || pos < 0) {
+            throw new Error("insert bingo array error, out of bound, pos=" + pos);
+        }
+    }
+
+    private addBinlog(opt: EDeltaOpt, pos?: number) {
+        this.makeDirty();
+
+        ++this._binlogCnt;
+
+        switch (opt) {
+            case EDeltaOpt.DELETE:
+            case EDeltaOpt.INSERT:
+            case EDeltaOpt.UPDATE_FULL:
+                this._binlog.writeUint32(opt);
+                this._binlog.writeUint32(pos);
+                break;
+            default:
+                break;
+        }
+    }
+
+    clearDirty() {
+        if (this.__dirty === EDirtyType.EDT_OK) {
+            return;
+        }
+        this.__dirty = EDirtyType.EDT_OK;
+        for (let i in this._data) {
+            let v = this._data[i];
+            if (v instanceof BGObject) {
+                v.clearDirty();
+            }
+        }
+    }
+
+    encodeFull(buffer: ByteBuffer, selfUid?: number) {
+        if (selfUid !== undefined) {
+            buffer.writeUint32(selfUid);
+        }
+        buffer.writeUint32(this.length);
+        buffer.writeUint32(0);
+        for (let k in this._data) {
+            let o = this._data[k];
+            if (o instanceof BGObject) {
+                o.encodeFull(buffer, 0);
+            }
+            else {
+                encodeDefaultType({
+                    value: o,
+                    type: this._valueT as EBGValueType,
+                    uid: 0,
+                    dirty: EDirtyType.EDT_DIRTY_FULL
+                }, buffer);
             }
         }
         this.clearDirty();
@@ -415,183 +697,32 @@ export class BGMap<T extends BGObject | number | string> extends BGObject {
         buffer.append(this._binlog.slice(0, this._binlog.offset));
         this.clearDirty();
     }
-}
 
-export class BGArray<T extends BGObject | string | number> extends BGObject {
-    private _array: T[] = [];
-    private _valueT: EBGValueType = undefined;
-    private _binlogCnt: number = 0;
-    private _binlog: ByteBuffer = new ByteBuffer();
-
-    constructor(parent: BGObject, data ?: T[]) {
-        super(parent);
-        if (data) {
-            for (let a of data) {
-                this.push(a);
-            }
-        }
-    }
-
-    set valueT(p: EBGValueType) {
-        this._valueT = p;
-    }
-
-    push(e: T) {
-        this.insert(this._array.length, e);
-        return this;
-    }
-
-    get length() {
-        return this._array.length;
-    }
-
-    insert(pos: number, e: T) {
-        if (e instanceof BGObject) {
-            e.parent = this;
-            e.dirty = EDirtyType.EDT_DIRTY_FULL;
-        }
-        if (pos === this._array.length) {
-            this._array.push(e);
-        }
-        else {
-            this.checkPos(pos);
-            this._array = this._array.slice(0, pos).concat([e, ...this._array.slice(pos)]);
-        }
-        this.addBinlog(EDeltaOpt.INSERT, pos);
-        return this;
-    }
-
-    find() {
-
-    }
-
-    findIndex() {
-
-    }
-
-    clear() {
-        for (let i = 0; i < this._array.length; ++i) {
-            this.addBinlog(EDeltaOpt.DELETE, i);
-        }
-        this._array = [];
-    }
-
-    // removeByValue(v: T) {
-    //     let idx = this.indexOf(v);
-    //     this.remove(idx);
-    // }
-
-    remove(pos: number) {
-        if (pos < 0 || pos >= this._array.length) {
-            return;
-        }
-
-        this._array.splice(pos, 1);
-        this.addBinlog(EDeltaOpt.DELETE, pos);
-        return this;
-    }
-
-    get(pos: number): T {
-        this.checkPos(pos);
-        return this._array[pos];
-    }
-
-    set(pos: number, v: T) {
-        this.checkPos(pos);
-        if (v instanceof BGObject) {
-            v.parent = this;
-            v.dirty = EDirtyType.EDT_DIRTY_FULL;
-        }
-        else {
-            if (v === this._array[pos]) {
-                return;
+    toObject(): any[] {
+        let reply = [];
+        for (let k in this._data) {
+            let d = this._data[k];
+            if (this._valueT === EBGValueType.object) {
+                reply.push((d as BGObject).toObject(true));
             }
             else {
-                this.addBinlog(EDeltaOpt.UPDATE_FULL, pos);
+                reply.push(d);
             }
         }
-        this._array[pos] = v;
-        this.makeDirty();
+        return reply;
     }
 
-    private checkPos(pos: number) {
-        if (pos >= this._array.length || pos < 0) {
-            throw new Error("insert bingo array error, out of bound, pos=" + pos);
-        }
-    }
-
-    clearDirty() {
-        if (this.__dirty === EDirtyType.EDT_OK) {
-            return;
-        }
-        this.__dirty = EDirtyType.EDT_OK;
-        this._binlog.clear();
-        this._binlogCnt = 0;
-        for (let i of this._array) {
-            if (i instanceof BGObject) {
-                i.clearDirty();
-            }
-        }
-    }
-
-    private addBinlog(opt: EDeltaOpt, pos?: number) {
-        this.makeDirty();
-
-        ++this._binlogCnt;
-
-        switch (opt) {
-            case EDeltaOpt.DELETE:
-            case EDeltaOpt.INSERT:
-            case EDeltaOpt.UPDATE_FULL:
-                this._binlog.writeUint32(opt);
-                this._binlog.writeUint32(pos);
-                break;
-            default:
-                break;
-        }
-    }
-
-    encodeFull(buffer: ByteBuffer, selfUid?: number) {
-        if (selfUid !== undefined) {
-            buffer.writeUint32(selfUid);
-        }
-        buffer.writeUint32(this._array.length);
-        buffer.writeUint32(0);
-        for (let o of this._array) {
-            if (o instanceof BGObject) {
-                o.encodeFull(buffer, 0);
+    fromObject(reply: []): void {
+        for (let k in reply) {
+            let d = reply[k];
+            if (this._valueT === EBGValueType.object) {
+                let t = new this._typeT();
+                (t as BGObject).fromObject(d);
+                this._data.push(t);
             }
             else {
-                encodeDefaultType({value: o, type: this._valueT, uid: 0, dirty: EDirtyType.EDT_DIRTY_FULL}, buffer);
+                this._data.push(d);
             }
         }
-        this.clearDirty();
-    }
-
-    encodeDelta(buffer: ByteBuffer, selfUid?: number) {
-        if (selfUid !== undefined) {
-            buffer.writeUint32(selfUid);
-        }
-
-        if (this._valueT === EBGValueType.object) {
-            for (let i = 0; i < this._array.length; ++i) {
-                let value = this._array[i] as BGObject;
-                if (value.dirty === EDirtyType.EDT_DIRTY_FULL) {
-                    ++this._binlogCnt;
-                    this._binlog.writeUint32(EDeltaOpt.UPDATE_FULL);
-                    this._binlog.writeUint32(i);
-                    value.encodeFull(this._binlog, 0);
-                }
-                else if (value.dirty === EDirtyType.EDT_DIRTY_MOD) {
-                    ++this._binlogCnt;
-                    this._binlog.writeUint32(EDeltaOpt.UPDATE_DELTA);
-                    this._binlog.writeUint32(i);
-                    value.encodeDelta(this._binlog, 0);
-                }
-            }
-        }
-        buffer.writeUint32(this._binlogCnt);
-        buffer.append(this._binlog.slice(0, this._binlog.offset));
-        this.clearDirty();
     }
 }

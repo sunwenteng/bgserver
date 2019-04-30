@@ -3,17 +3,16 @@ import {gameNow, isSameDay, isSameWeek, realNow, refreshTime} from '../../../lib
 import {RedisMgr, RedisType,} from '../../../lib/redis/redis_mgr';
 import * as WorldDB from '../../../lib/mysql/world_db';
 import {WorldDataRedisKey} from "../game_world";
-import {C2S, S2C} from "../../proto/cmd";
+import {S2C} from "../../proto/cmd";
 import {GameSession} from "../game_session";
-import {BGField, BGMysql} from "../../../lib/util/descriptor";
+import {BGMysql} from "../../../lib/util/descriptor";
 import {ConfigMgr} from "../../../config/data/config_struct";
 import * as util from "util";
 import * as LoginDB from "../../../lib/mysql/login_db";
 import {GM_TYPE} from "../../gm/gm_struct";
-import {DirtyModel} from "./model";
 import {ERROR_CODE} from "../../../lib/util/error_code";
-import {RoleModel} from "./role_model";
-import {EMysqlValueType} from "./defines";
+import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
+import {BGField, BGObject, EBGValueType, EDirtyType} from "../../../lib/util/bg_util";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';
@@ -24,94 +23,6 @@ export enum ERoleState {
     banChat = 2,
 }
 
-abstract class RedisData extends DirtyModel {
-    dynamicFields: { [key: string]: string } = {};
-    rankFields: { [key: string]: any } = {};
-    revRankFields: { [eRankType: string]: string } = {};
-    isSummaryDirty: boolean = false;
-    redisKeyExpire: number;
-
-    protected constructor(redisPrefix: string, expireTime: number = 3600) {
-        super();
-        this.redisKeyExpire = expireTime;
-    }
-
-    public reset() {
-        this.dirtyFields = {};
-        this.dynamicFields = {};
-        this.rankFields = {};
-        this.isSummaryDirty = false;
-    }
-
-    public deserialize(reply: { [key: string]: any }): void {
-        for (let obj in reply) {
-            if (this.fields.hasOwnProperty(obj)) {
-                switch (typeof this.fields[obj]) {
-                    case 'number' :
-                    case 'boolean' :
-                        this.fields[obj] = reply[obj] === '' ? 0 : parseInt(reply[obj]);
-                        break;
-                    case 'string' :
-                        this.fields[obj] = reply[obj];
-                        break;
-                    case 'object' :
-                        try {
-                            if (this.fields[obj] instanceof RoleModel) {
-                                if (reply[obj] !== "" && reply[obj] !== "null" && reply[obj] !== null) {
-                                    this.fields[obj].deserialize(reply[obj]);
-                                }
-                                this.fields[obj]['loaded'] = true;
-                            }
-                            else {
-                                if (reply[obj] !== "" && reply[obj] !== "null" && reply[obj] !== null) {
-                                    this.fields[obj] = JSON.parse(reply[obj]);
-                                }
-                            }
-                        }
-                        catch (err) {
-                            Log.sError(`redis data parse failed, key=${obj}, val=${reply[obj]}, error=${err}`);
-                            this.fields[obj] = {};
-                        }
-
-                        break;
-                    default:
-                        Log.sError('wrong type, key=%s, type=%s', obj, typeof this.fields[obj]);
-                        break;
-                }
-            }
-        }
-        this.reset();
-    }
-
-    public serialize(bAll?: boolean): { [key: string]: any } {
-        let reply: { [key: string]: any } = {};
-        let checkFields = bAll ? this.fields : this.dirtyFields;
-        for (let obj in checkFields) {
-            if (this.fields.hasOwnProperty(obj)) {
-                switch (typeof this.fields[obj]) {
-                    case 'number' :
-                    case 'string' :
-                    case 'boolean':
-                        reply[obj] = this.fields[obj];
-                        break;
-                    case 'object' :
-                        if (this.fields[obj] instanceof RoleModel) {
-                            reply[obj] = this.fields[obj].serialize();
-                        }
-                        else {
-                            reply[obj] = JSON.stringify(this.fields[obj]);
-                        }
-                        break;
-                    default:
-                        Log.sError('wrong type, key=%s, type=%s', obj, typeof this.fields[obj]);
-                        break;
-                }
-            }
-        }
-        return reply;
-    }
-}
-
 interface IConsumeInfo {
     goodsId: number;
     goodsQuantity: number;
@@ -120,7 +31,7 @@ interface IConsumeInfo {
     diamondPaidUse: number;
 }
 
-export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
+export class Role extends BGObject {
     _session: GameSession;
     _endProtocol: any = null;
 
@@ -132,36 +43,31 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
     consumeInfo: IConsumeInfo[] = [];
 
     /*start of default*/
-    @BGMysql(EMysqlValueType.uint8) @BGField(true) gmAuth: GM_TYPE = GM_TYPE.NORMAL;
-    @BGMysql(EMysqlValueType.uint32) @BGField() timeLastGm: number = 0;
-    @BGMysql(EMysqlValueType.uint8) @BGField() state: ERoleState = ERoleState.normal;
-    @BGMysql(EMysqlValueType.uint32) @BGField(false, true) lastLoginTime: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(true) createTime: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField() timeDaily = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField() timeWeekly = 0;
+    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true) gmAuth: GM_TYPE = GM_TYPE.NORMAL;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeLastGm: number = 0;
+    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8) state: ERoleState = ERoleState.normal;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false, true) lastLoginTime: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true) createTime: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeDaily = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeWeekly = 0;
     /*end of default*/
 
     // NOTE: 声明的属性必须都在mysql有相应列做存储
-    @BGMysql(EMysqlValueType.uint32) @BGField(true, true) uid: number = 0;
-    @BGMysql(EMysqlValueType.string) @BGField(true, true) nickname: string = '';
-    @BGMysql(EMysqlValueType.string, 256) @BGField(true, true) headimgurl: string = '';
-    @BGMysql(EMysqlValueType.uint8) @BGField(true, true) gender: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(true, true) iconId: number = 0;
-    @BGMysql(EMysqlValueType.uint64) @BGField(true, true) exp: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(true, true) level: number = 0;
-    @BGMysql(EMysqlValueType.uint64) @BGField(true, true, C2S.ERankType.combat) combat: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(true) vipExp: number = 0;            // vip经验
-    @BGMysql(EMysqlValueType.uint8) @BGField(true, true) vipLevel: number = 0;    // vip等级
-    @BGMysql(EMysqlValueType.uint32) @BGField(true, true) guildId: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) uid: number = 0;
+    @BGMysql(EMysqlValueType.string, 256) @BGField(EBGValueType.string, true, true) nickname: string = '';
+    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) gender: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) iconId: number = 0;
+    @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, true, true) exp: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) level: number = 0;
+    @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, true, true) combat: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true) vipExp: number = 0;
+    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) vipLevel: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) guildId: number = 0;
 
     constructor(uid: number, session?: GameSession) {
-        super(roleRedisPrefix);
+        super();
         this._session = session;
         this.uid = uid;
-    }
-
-    private getDataFields(): string[] {
-        return Object.keys(this.fields);
     }
 
     public static getRedisKey(uid: number | string) {
@@ -175,7 +81,7 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
         }
         // 同步存储到redis
         Log.sDebug('%s:%j', Role.getRedisKey(this.uid), saveData);
-        await RedisMgr.getInstance(RedisType.GAME).hmset(Role.getRedisKey(this.uid), saveData, this.redisKeyExpire);
+        await RedisMgr.getInstance(RedisType.GAME).hmset(Role.getRedisKey(this.uid), saveData, ROLE_REDIS_EXPIRE_TIME);
         // 往脏数据集合添加
         await RedisMgr.getInstance(RedisType.GAME).sadd(WorldDataRedisKey.DIRTY_ROLES, this.uid);
 
@@ -183,19 +89,49 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
             await RedisMgr.getInstance(RedisType.GAME).sadd(WorldDataRedisKey.RELOAD_ROLES, this.uid);
         }
 
-        if (bSaveAll || this.isSummaryDirty) {
-            await this.saveSummary();
-        }
+        // TODO
+        // if (bSaveAll || this.isSummaryDirty) {
+        //     await this.saveSummary();
+        // }
 
         if (bSync2Login) {
             await this.syncDataToLogin();
         }
-        this.reset();
+        this.clearDirty();
     }
 
     private async saveSummary() {
         let msg = await this.serializeSummaryNetMsg();
         await Role.saveRoleSummary(this.uid, msg);
+    }
+
+    public deserialize(reply: { [key: string]: any }): void {
+        for (let k in reply) {
+            let o = reply[k];
+            if (typeof o === 'string') {
+                try {
+                    reply[k] = JSON.parse(o);
+                }
+                catch (e) {
+                    Log.uError(this.uid, e);
+                }
+            }
+        }
+        this.fromObject(reply);
+    }
+
+    public serialize(bAll?: boolean): { [key: string]: any } {
+        if (!bAll && this.dirty === EDirtyType.EDT_OK) {
+            return;
+        }
+        let reply = this.toObject(bAll);
+        for (let k in reply) {
+            let o = reply[k];
+            if (typeof o === 'object') {
+                reply[k] = JSON.stringify(o);
+            }
+        }
+        return reply;
     }
 
     public async load(): Promise<boolean> {
@@ -204,9 +140,9 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
                 resolve(false);
             }
             else {
-                let queryField = this.getDataFields();
+                let queryField = Object.keys(this.__fields);
                 let key = Role.getRedisKey(this.uid);
-                let reply = await RedisMgr.getInstance(RedisType.GAME).hmget(key, queryField, this.redisKeyExpire);
+                let reply = await RedisMgr.getInstance(RedisType.GAME).hmget(key, queryField, ROLE_REDIS_EXPIRE_TIME);
                 // 缓存不存在，从db查询然后放到缓存
                 if (Object.keys(reply).length === 0) {
                     let result = await WorldDB.conn.execute('select * from player_info_' + this.getTableNum() + ' where ?', {uid: this.uid});
@@ -221,7 +157,7 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
                             }
                         }
                         this.deserialize(result[0]);
-                        await RedisMgr.getInstance(RedisType.GAME).hmset(key, this.serialize(true), this.redisKeyExpire);
+                        await RedisMgr.getInstance(RedisType.GAME).hmset(key, this.serialize(true), ROLE_REDIS_EXPIRE_TIME);
                         resolve(true);
                     }
                 }
@@ -240,12 +176,6 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
     }
 
     public async create(name?: string, gender?: number, iconId?: number, inviter?: number) {
-        for (let k in this.fields) {
-            if (this.fields[k] instanceof RoleModel) {
-                this.fields[k].loaded = true;
-            }
-        }
-
         this.createTime = realNow();
         this.nickname = name ? name : 'robot' + this.uid;
         this.gender = gender ? gender : 0;
@@ -261,7 +191,7 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
         }
 
         await WorldDB.conn.execute('insert into player_info_' + this.getTableNum() + ' set ?', this.serialize(true));
-        this.dynamicFields = {};
+        this.clearDirty();
     }
 
     public getTableNum(): number {
@@ -297,31 +227,11 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
     }
 
     public sendProUpdate(bAll: boolean = false) {
-        if (bAll) {
-            let pck = S2C.SC_UPDATE_ROLE_PRO.create();
-            for (let k in pck) {
-                if (!this.fields.hasOwnProperty(k)) {
-                    if (k !== 'constructor' && k !== 'toJSON') {
-                        Log.sError('SC_ROLE_PRO_UPDATE %s not exist in role data', k);
-                    }
-                    continue;
-                }
-                pck[k] = this.fields[k];
-            }
-            this.sendProtocol(pck);
-        }
-        else if (Object.keys(this.dynamicFields).length > 0) {
-            let pck = S2C.SC_UPDATE_ROLE_PRO.create();
-            for (let key in this.dynamicFields) {
-                pck[key] = this.fields[key];
-            }
-            this.sendProtocol(pck);
-            this.dynamicFields = {};
-        }
+        // TODO
     }
 
     public async setAlive() {
-        await RedisMgr.getInstance(RedisType.GAME).expire(Role.getRedisKey(this.uid), this.redisKeyExpire);
+        await RedisMgr.getInstance(RedisType.GAME).expire(Role.getRedisKey(this.uid), ROLE_REDIS_EXPIRE_TIME);
     }
 
     public async notify() {
@@ -333,14 +243,6 @@ export class Role extends RedisData implements S2C.ISC_UPDATE_ROLE_PRO {
     public async serializeSummaryNetMsg(): Promise<S2C.RoleSummary> {
         // todo
         return null;
-    }
-
-    public getRankValue(rankType: C2S.ERankType): number {
-        if (!this.revRankFields.hasOwnProperty(rankType)) {
-            throw new Error(rankType + ' rankType, not found in role define');
-        }
-
-        return this.fields[this.revRankFields[rankType]];
     }
 
     /**

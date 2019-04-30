@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package Zombie;
+
+message Session_Init{
+    string  name = 1;   // session类型
+    string  uId = 2;    // 用户唯一标识
+    uint32  sId = 3;  // session实例Id。0代表第一次连接，其余代表重连。
+    string  hash = 4;   // session schema的hash
+    string  lang = 5;   // 语言
+    string  channelId = 6;  // 渠道ID
+}
+
+message Session_Close{
+    uint32   reason = 1;
+}
+
+enum Session_Service_Bind_State{
+    SSBS_UNBINDED = 0;
+    SSBS_BINDED = 1;
+}
+
+message Session_Service_Bind{
+    Session_Service_Bind_State   bind = 2;
+}
+
+message Ack_Msg{
+    uint32   msgIdx = 1;
+}
+
+enum Data_Sync_Type{
+    E_DST_FULL = 0;
+    E_DST_DELTA = 1;
+}
+
+message Data_Sync{
+    Data_Sync_Type type = 1;
+    bytes   data = 2;
+}

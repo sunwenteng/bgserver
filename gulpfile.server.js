@@ -4,17 +4,19 @@ const exec = require('child_process').exec;
 const fs = require('fs');
 const path = require("path");
 
-let protoFiles = [
-    path.resolve('./src/app/proto/c2s.proto'),
-    path.resolve('./src/app/proto/s2c.proto'),
-    path.resolve('./src/app/proto/router.proto'),
-];
-
 let cmdJsFile = path.resolve('./src/app/proto/cmd.js'),
     cmdTsFile = path.resolve('./src/app/proto/cmd.d.ts');
 
 
 gulp.task('proto2js', (cb) => {
+    let protoDir = path.resolve('./src/app/proto');
+    const files = fs.readdirSync(protoDir);
+    let protoFiles = [];
+    for (let file of files) {
+        if (file.indexOf('.proto') !== -1) {
+            protoFiles.push(path.join(protoDir, file));
+        }
+    }
     exec('npx pbjs -t static-module -w commonjs -o ' + cmdJsFile + ' ' + protoFiles.join(' ') + ' && ' +
         'npx pbts --no-comments -o ' + cmdTsFile + ' ' + cmdJsFile, (error) => {
         if (error) {
@@ -26,7 +28,7 @@ gulp.task('proto2js', (cb) => {
     });
 });
 
-gulp.task('scripts_src', ['svn_update_server'], () => {
+gulp.task('scripts_src', /*['svn_update_server'],*/ () => {
     return gulp.src('src/**/*.ts')
         .pipe($.sourcemaps.init({loadMaps: true}))
         .pipe($.typescript({

@@ -56,3 +56,25 @@ export enum EActionCheckType {
     needAuth = 1,           // 上线成功前发送无效
     authedThenInvalid = 2   // 上线成功后再次发送，无效
 }
+
+export const MSG_HEADER_LEN_BYTES = 4;
+export const MSG_HEADER_MSG_ID_BYTES = 2;
+export const MSG_HEADER_MSG_IDX_BYTES = 2;
+export const MSG_HEADER_TOTAL_BYTES = 8;
+
+// 1000以内的消息id为保留id，不能自动分配
+export const MSG_ID_SESSION_INIT = 1;
+export const MSG_ID_SESSION_INIT_COMPLETE = 2;
+export const MSG_ID_SESSION_CLOSE = 3;
+export const MSG_ID_ACK_MSG = 4; // 确认已经收到包
+export const MSG_ID_HEART_BEAT = 5;
+
+export const SESSION_CLOSE_REASON_RECV_SESSION_CLOSE = 0;
+export const SESSION_CLOSE_REASON_APPLICATION_CLOSE = 1;
+export const SESSION_CLOSE_REASON_DUPLICATE_CONNECT = 2;
+export const SESSION_CLOSE_REASON_PARSE_PACKET_ERROR = 3;
+export const SESSION_CLOSE_REASON_PARSE_ACK_MSG_ERROR = 4;
+export const SESSION_CLOSE_REASON_SEND_CACHE_OVERFLOW = 5;
+export const SESSION_CLOSE_REASON_HANDLE_PACKET_ERROR = 6;
+
+export const ROLE_REDIS_EXPIRE_TIME = 86400;
