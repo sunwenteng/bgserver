@@ -1,4 +1,3 @@
-import {C2S, S2C} from "../../proto/cmd";
 import {Role} from "../modles/role";
 import {BGAction, execTime} from "../../../lib/util/descriptor";
 import {Get, JsonController} from "routing-controllers";
@@ -7,6 +6,8 @@ import {EActionCheckType} from "../modles/defines";
 import {Inject} from "typedi";
 import {ResourceService} from "../services/resource_service";
 import {Item} from "../modles/item_model";
+import {C2S} from "../../proto/c2s";
+import {S2C} from "../../proto/s2c";
 
 @JsonController('/test')
 export class TestController {

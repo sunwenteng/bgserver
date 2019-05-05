@@ -3,7 +3,6 @@ import {gameNow, isSameDay, isSameWeek, realNow, refreshTime} from '../../../lib
 import {RedisMgr, RedisType,} from '../../../lib/redis/redis_mgr';
 import * as WorldDB from '../../../lib/mysql/world_db';
 import {WorldDataRedisKey} from "../game_world";
-import {S2C} from "../../proto/cmd";
 import {GameSession} from "../game_session";
 import {BGMysql} from "../../../lib/util/descriptor";
 import {ConfigMgr} from "../../../config/data/config_struct";
@@ -14,6 +13,7 @@ import {ERROR_CODE} from "../../../lib/util/error_code";
 import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
 import {BGField, BGObject, EBGValueType, EDirtyType} from "../../../lib/util/bg_util";
 import {Item, ItemModel} from "./item_model";
+import {S2C} from "../../proto/s2c";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';

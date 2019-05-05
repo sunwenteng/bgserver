@@ -2,9 +2,10 @@ import {UserSession} from '../../lib/net/user_session';
 import {Log} from "../../lib/util/log";
 import {LoginWorld} from "./login_world";
 import * as LoginDB from "../../lib/mysql/login_db";
-import {C2S, S2C} from "../proto/cmd";
 import {realNow} from "../../lib/util/time";
 import {EServerState} from "../../lib/mysql/login_db";
+import {S2C} from "../proto/s2c";
+import {C2S} from "../proto/c2s";
 
 const MAX_PACKET_COUNT = 10000;
 

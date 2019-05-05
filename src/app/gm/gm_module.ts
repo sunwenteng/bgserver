@@ -7,7 +7,6 @@ import {EWorldMsg, GameWorld, WorldDataRedisKey} from "../game/game_world";
 import {RedisMgr, RedisType} from "../../lib/redis/redis_mgr";
 import {ERoleState, Role} from "../game/modles/role";
 import {Log} from "../../lib/util/log";
-import {C2S, S2C} from "../proto/cmd";
 import {realNow} from "../../lib/util/time";
 import {GM_RES_RELOAD_FLAG} from "../game/modles/defines";
 import {
@@ -16,6 +15,8 @@ import {
 } from "../../config/data/config_struct";
 import {EChargeState} from "../../lib/mysql/login_db";
 import {EChargeType} from "../../lib/mysql/login_db";
+import {S2C} from "../proto/s2c";
+import {C2S} from "../proto/c2s";
 import EChatChannel = C2S.CS_ROLE_CHAT.EChatChannel;
 
 export class set_server_name extends GmStruct.GmCommand {

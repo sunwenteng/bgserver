@@ -3,10 +3,10 @@ import {Log} from "../../lib/util/log";
 import {GameWorld, WorldDataRedisKey} from "./game_world";
 import {RedisMgr, RedisType} from "../../lib/redis/redis_mgr";
 import {Role, roleRedisPrefix} from "./modles/role";
-import {C2S} from "../proto/cmd";
 import {execTime} from "../../lib/util/descriptor";
 import {IntervalTimer, realNow} from "../../lib/util/time";
 import * as LoginDB from '../../lib/mysql/login_db';
+import {C2S} from "../proto/c2s";
 
 const MAX_PACKET_COUNT = 10000;
 

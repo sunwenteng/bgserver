@@ -1,7 +1,7 @@
 import {WebSocket} from "./ws/web_socket";
 import {LinkedList} from "../util/linked_list";
 import * as events from "events";
-import {S2C} from "../../app/proto/cmd";
+import {S2C} from "../../app/proto/s2c";
 import {Log} from "../util/log";
 import {realNow} from "../util/time";
 

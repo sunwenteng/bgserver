@@ -4,28 +4,29 @@ const exec = require('child_process').exec;
 const fs = require('fs');
 const path = require("path");
 
-let cmdJsFile = path.resolve('./src/app/proto/cmd.js'),
-    cmdTsFile = path.resolve('./src/app/proto/cmd.d.ts');
 
+function execP(cmd) {
+    return new Promise((resolve, reject) => {
+        exec(cmd, resolve).on('error', reject);
+    });
+}
 
-gulp.task('proto2js', (cb) => {
-    let protoDir = path.resolve('./src/app/proto');
+gulp.task('proto2js', async () => {
+    const protoDir = path.resolve('./src/app/proto');
     const files = fs.readdirSync(protoDir);
-    let protoFiles = [];
+    let protoFiles = [], jsFiles = [], tsFiles = [];
     for (let file of files) {
         if (file.indexOf('.proto') !== -1) {
             protoFiles.push(path.join(protoDir, file));
+            jsFiles.push(path.join(protoDir, file.split('.')[0] + '.js'));
+            tsFiles.push(path.join(protoDir, file.split('.')[0] + '.d.ts'));
         }
     }
-    exec('npx pbjs -t static-module -w commonjs -o ' + cmdJsFile + ' ' + protoFiles.join(' ') + ' && ' +
-        'npx pbts --no-comments -o ' + cmdTsFile + ' ' + cmdJsFile, (error) => {
-        if (error) {
-            console.error(error);
-        }
-        else {
-            cb();
-        }
-    });
+
+    for (let i = 0; i < protoFiles.length; i++) {
+        const protoFile = protoFiles[i];
+        await execP(`npx pbjs -t static-module -w commonjs -o ${jsFiles[i]} ${protoFile} && npx pbts --no-comments -o ${tsFiles[i]} ${jsFiles[i]}`)
+    }
 });
 
 gulp.task('scripts_src', /*['svn_update_server'],*/ () => {

@@ -329,7 +329,7 @@ enum EDeltaOpt {
 export class BGMap<T extends BGObject | string | number> extends BGObject {
     private _data: { [key: string]: T } = {};
     private _valueT: EBGValueType = undefined;
-    private _typeT: (new () => T) = undefined;
+    private  readonly _typeT: (new () => T) = undefined;
     private _binlogCnt: number = 0;
     private _binlog: ByteBuffer = new ByteBuffer();
     private _length: number = 0;
@@ -533,7 +533,7 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
 export class BGArray<T extends BGObject | string | number> extends BGObject {
     private _data: T[] = [];
     private _valueT: EBGValueType = undefined;
-    private _typeT: (new () => T) = undefined;
+    private readonly _typeT: (new () => T) = undefined;
     private _binlogCnt: number = 0;
     private _binlog: ByteBuffer = new ByteBuffer();
 

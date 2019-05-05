@@ -1,8 +1,8 @@
 import {SocketBuffer} from './socket_buffer';
 import * as net from 'net';
 import {TcpServer} from './tcp_server';
-import {C2S, Router, S2C} from "../../../app/proto/cmd";
 import {Log} from "../../util/log";
+import {Router} from "../../../app/proto/router";
 
 export class TcpSocket {
     socket: net.Socket; // TODO

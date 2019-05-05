@@ -3,7 +3,6 @@ import {LinkedList, ListNode} from '../../lib/util/linked_list';
 import * as GameUtil from '../../lib/util/game_util';
 import * as fs from 'fs';
 import {Log} from "../../lib/util/log";
-import {C2S, S2C} from "../proto/cmd";
 import {RedisChanel, RedisMgr, RedisType} from "../../lib/redis/redis_mgr";
 import {roleRedisPrefix} from "./modles/role";
 import * as events from "events";
@@ -20,6 +19,8 @@ import {rmAll} from "../../lib/util/game_util";
 import {Global} from "../../lib/util/global";
 import {Container} from "typedi";
 import {BGObject} from "../../lib/util/bg_util";
+import {S2C} from "../proto/s2c";
+import {C2S} from "../proto/c2s";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',

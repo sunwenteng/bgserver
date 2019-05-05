@@ -1,6 +1,6 @@
 import {SocketBuffer} from './socket_buffer';
 import * as net from 'net';
-import {C2S, Router, S2C} from "../../../app/proto/cmd";
+import {Router} from "../../../app/proto/router";
 
 let connectCnt = 1;
 

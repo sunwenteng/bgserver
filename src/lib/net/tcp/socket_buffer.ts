@@ -1,5 +1,5 @@
-import {C2S, Router, S2C} from "../../../app/proto/cmd";
 import {Log} from "../../util/log";
+import {Router} from "../../../app/proto/router";
 
 let MAX_PACKET_LEN = 4096;   // 包长上限
 
