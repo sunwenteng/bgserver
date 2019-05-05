@@ -81,9 +81,10 @@ export class Role extends BGObject {
 
     public async save(bSaveAll: boolean = false, bSync2Login: boolean = false): Promise<void> {
         let saveData = this.encodeDB(bSaveAll);
-        if (Object.keys(saveData).length === 0) {
+        if (!saveData || Object.keys(saveData).length === 0) {
             return;
         }
+        this.clearDirty();
         // 同步存储到redis
         Log.sDebug('%s:%j', Role.getRedisKey(this.uid), saveData);
         await RedisMgr.getInstance(RedisType.GAME).hmset(Role.getRedisKey(this.uid), saveData, ROLE_REDIS_EXPIRE_TIME);
@@ -91,6 +92,7 @@ export class Role extends BGObject {
         await RedisMgr.getInstance(RedisType.GAME).sadd(WorldDataRedisKey.DIRTY_ROLES, this.uid);
 
         if (!this._session) {
+            // notify other session to reload role from redis to memory
             await RedisMgr.getInstance(RedisType.GAME).sadd(WorldDataRedisKey.RELOAD_ROLES, this.uid);
         }
 
@@ -102,7 +104,6 @@ export class Role extends BGObject {
         if (bSync2Login) {
             await this.syncDataToLogin();
         }
-        this.clearDirty();
     }
 
     private async saveSummary() {

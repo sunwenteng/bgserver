@@ -73,15 +73,9 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
                     role.refreshWeekly();
 
                     await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
-                    /**
-                     * todo
-                     * 下面两处可以异步，后续进行测试
-                     */
-                    await role.notify();
-                    await role.save();
-                    // role.save().catch((e) => {
-                    //     Log.uError(role.uid, e);
-                    // });
+                    // async save
+                    role.notify().catch((e) => Log.uError(role.uid, e));
+                    role.save().catch((e) => Log.uError(role.uid, e));
                 });
             }
         };

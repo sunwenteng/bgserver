@@ -1,5 +1,6 @@
 # directory
 .idea/
+.nyc_output
 node_modules/
 dist/
 tool/crawler/data

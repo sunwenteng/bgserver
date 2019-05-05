@@ -65,6 +65,11 @@ export class TestController {
         }
         await roleB.save(true);
 
+        for (let i = 0; i < 2000; i++) {
+            roleB.combat = i;
+            roleB.save();
+        }
+
         return 'hello my len=' + roleB.itemModel.itemMap.length;
     }
 
