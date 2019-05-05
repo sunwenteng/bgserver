@@ -4,8 +4,11 @@ import * as events from "events";
 import {S2C} from "../../app/proto/s2c";
 import {Log} from "../util/log";
 import {realNow} from "../util/time";
+import * as ByteBuffer from "bytebuffer";
+import {MSG_HEADER_TOTAL_BYTES} from "../../app/game/modles/defines";
 
 export abstract class UserSession extends events.EventEmitter {
+    private _curMsgIdx: number = 0;
     public packets: LinkedList<any>;
     public socket: WebSocket | any;
     public timeLastAlive: number = realNow();
@@ -40,6 +43,14 @@ export abstract class UserSession extends events.EventEmitter {
         this.socket.close();
     }
 
+    private getNextMsgIdx(): number {
+        ++this._curMsgIdx;
+        if (this._curMsgIdx === 65536) {
+            this._curMsgIdx = 1;
+        }
+        return this._curMsgIdx;
+    }
+
     public sendProtocol(data: any) {
         try {
             Log.sDebug('socketUid=%d send %s=%j', this.socket.uid, data.constructor.name, data);
@@ -51,8 +62,15 @@ export abstract class UserSession extends events.EventEmitter {
             }
             msg[data.constructor.name] = data;
             let buffer = S2C.Message.encode(msg).finish();
-            // this.send(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.length));
-            this.send(buffer);
+
+            let msgIdx = this.getNextMsgIdx();
+            let finalBuffer = new ByteBuffer();
+            finalBuffer.writeUint32(buffer.length + MSG_HEADER_TOTAL_BYTES);
+            // finalBuffer.writeUint16();
+            finalBuffer.writeUint16(msgIdx);
+            finalBuffer.append(buffer);
+
+            this.send(finalBuffer.buffer.slice(0, finalBuffer.offset));
         }
         catch (e) {
             Log.sError(e);

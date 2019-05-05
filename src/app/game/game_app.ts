@@ -52,6 +52,6 @@ main().then(async () => {
     createPidFile();
     Log.sInfo('app start success');
 }).catch((reason => {
-    Log.sError(reason + '\napp start fail');
+    Log.sError(reason.stack + '\napp start fail');
     process.exit(1);
 }));

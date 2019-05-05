@@ -7,13 +7,15 @@ import {execTime} from "../../lib/util/descriptor";
 import {IntervalTimer, realNow} from "../../lib/util/time";
 import * as LoginDB from '../../lib/mysql/login_db';
 import {C2S} from "../proto/c2s";
+import {LinkedList} from "../../lib/util/linked_list";
 
 const MAX_PACKET_COUNT = 10000;
 
 export class GameSession extends UserSession {
-    // public roleId: number = 0;
     public role: Role = null;
     private _loginKey: number = 0;
+    public ackMsg: LinkedList<[number, any]> = new LinkedList();
+
     updatePlayerCharge: IntervalTimer = new IntervalTimer(1);
     updatePlayerAct: IntervalTimer = new IntervalTimer(1);
 

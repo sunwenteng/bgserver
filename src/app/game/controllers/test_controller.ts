@@ -9,6 +9,7 @@ import {Item} from "../modles/item_model";
 import {C2S} from "../../proto/c2s";
 import {S2C} from "../../proto/s2c";
 import {Post} from "routing-controllers/decorator/Post";
+import {GameSession} from "../game_session";
 
 @JsonController('/test')
 export class TestController {

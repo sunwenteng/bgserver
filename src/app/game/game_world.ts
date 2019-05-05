@@ -9,7 +9,14 @@ import * as events from "events";
 import * as time from '../../lib/util/time';
 import * as LoginDB from "../../lib/mysql/login_db";
 import * as WorldDB from "../../lib/mysql/world_db";
-import {BMap, GlobalKeyType, GM_RES_RELOAD_FLAG} from "./modles/defines";
+import {
+    BMap,
+    GlobalKeyType,
+    GM_RES_RELOAD_FLAG,
+    MSG_ID_ACK_MSG,
+    MSG_ID_HEART_BEAT,
+    MSG_ID_SESSION_INIT
+} from "./modles/defines";
 import {realNow} from "../../lib/util/time";
 import {GameSession} from "./game_session";
 import {createResVersionFile, getResVersion} from "../../lib/util/game_util";
@@ -21,6 +28,7 @@ import {Container} from "typedi";
 import {BGObject} from "../../lib/util/bg_util";
 import {S2C} from "../proto/s2c";
 import {C2S} from "../proto/c2s";
+import {RoleController} from "./controllers/role_controller";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',
@@ -126,7 +134,7 @@ async function downloadConfigAndReload(url: string): Promise<boolean> {
 }
 
 interface IController {
-    controller: Function;
+    controller: Function | any;
     action: Function;
 }
 
@@ -180,7 +188,6 @@ export class GameWorld extends events.EventEmitter {
                         }
                         break;
                     }
-
                 }
             }
             else if (channel.indexOf(roleRedisPrefix) !== -1) {
@@ -265,6 +272,23 @@ export class GameWorld extends events.EventEmitter {
         return this._allControllers[cmd].action;
     }
 
+    private registerControllerManual() {
+        this._allControllers[MSG_ID_SESSION_INIT] = {
+            controller: RoleController,
+            action: Container.get(RoleController).online
+        };
+
+        this._allControllers[MSG_ID_ACK_MSG] = {
+            controller: Container.get(RoleController),
+            action: Container.get(RoleController).ackMsg
+        };
+
+        this._allControllers[MSG_ID_HEART_BEAT] = {
+            controller: Container.get(RoleController),
+            action: Container.get(RoleController).heartBeat
+        };
+    }
+
     private registerController(): void {
         for (let cmd in C2S.Message.prototype) {
             if (!C2S.Message.prototype.hasOwnProperty(cmd)) {
@@ -296,6 +320,9 @@ export class GameWorld extends events.EventEmitter {
                             Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller, method=' + method + ' not exists');
                         }
                         else {
+                            if (!Container.has(moduleClass)) {
+                                Container.set(moduleClass, new moduleClass());
+                            }
                             this._allControllers[cmd] = {
                                 controller: Container.get(moduleClass),
                                 action: Container.get(moduleClass)[method]
@@ -305,6 +332,8 @@ export class GameWorld extends events.EventEmitter {
                 }
             }
         }
+
+        this.registerControllerManual();
     }
 
     public async start() {
