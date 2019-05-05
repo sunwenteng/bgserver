@@ -295,10 +295,20 @@ export abstract class BGObject {
     }
 
     public decodeDB(reply: { [key: string]: any }): void {
-        for (let k in reply) {
-            let o = reply[k];
-            if (typeof o === 'string') {
-                reply[k] = JSON.parse(o);
+        for (let k in this.__fields) {
+            let f = this.__fields[k].value;
+            if (!reply[k] !== undefined) {
+                switch (typeof f) {
+                    case "number":
+                    case "boolean":
+                        reply[k] = Number(reply[k]);
+                        break;
+                    case "object":
+                        reply[k] = JSON.parse(reply[k]);
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         this.fromObject(reply);
@@ -311,7 +321,7 @@ export abstract class BGObject {
         let reply = this.toObject(bAll);
         for (let k in reply) {
             let o = reply[k];
-            if (typeof o === 'object' || typeof o === 'string') {
+            if (typeof o === 'object') {
                 reply[k] = JSON.stringify(o);
             }
         }
