@@ -329,7 +329,7 @@ enum EDeltaOpt {
 export class BGMap<T extends BGObject | string | number> extends BGObject {
     private _data: { [key: string]: T } = {};
     private _valueT: EBGValueType = undefined;
-    private  readonly _typeT: (new () => T) = undefined;
+    private readonly _typeT: (new () => T) = undefined;
     private _binlogCnt: number = 0;
     private _binlog: ByteBuffer = new ByteBuffer();
     private _length: number = 0;
@@ -584,12 +584,14 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
         return this;
     }
 
-    find() {
-
-    }
-
-    findIndex() {
-
+    find(d: T, compare ?: (a: T, b: T) => number): T[] {
+        let ret = [];
+        for (let i = 0; i < this._data.length; ++i) {
+            if ((compare && compare(d, this._data[i]) === 0) || this._data[i] === d) {
+                ret.push(this._data[i]);
+            }
+        }
+        return ret;
     }
 
     clear() {

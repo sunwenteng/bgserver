@@ -95,11 +95,23 @@ describe('bg_util', () => {
         role.timeMap.get(1).array.insert(1, new TestInnest(1.5, 1.5));
         expect(role.timeMap.get(1).array.length).eq(4);
 
+        role.timeMap.get(1).array.insert(1, new TestInnest(1.2, 1.2));
+        expect(role.timeMap.get(1).array.length).eq(5);
+
+        role.timeMap.get(1).array.remove(1);
+        expect(role.timeMap.get(1).array.get(1).uid).eq(1.5);
+        expect(role.timeMap.get(1).array.length).eq(4);
+
         expect(role.timeMap.get(1).array.get(1).uid).eq(1.5);
 
         expect(role.dirtyFields()).deep.eq(['timeMap']);
 
-        role.clearDirty();
+        role.timeMap.get(1).array.insert(1, new TestInnest(1.5, 1.5));
+        expect(role.timeMap.get(1).array.length).eq(5);
+        expect(role.timeMap.get(1).array.find(new TestInnest(1.5, 1.5), (a, b)=> {
+            return a.uid - b.uid;
+        }).length).eq(2);
+
         role.timeMap.get(1).array.get(1).uid += 10;
         expect(role.dirtyFields()).deep.eq(['timeMap']);
         expect(role.timeMap.get(1).array.get(1).uid).eq(11.5);
