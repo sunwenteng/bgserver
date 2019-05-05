@@ -1,8 +1,6 @@
-// @ts-ignore
 import * as winston from "winston";
 import * as sourceMap from "source-map-support";
 import * as util from 'util';
-// @ts-ignore
 import * as moment from 'moment';
 import * as fs from "fs";
 import * as path from "path";
