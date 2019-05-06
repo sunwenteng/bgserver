@@ -91,11 +91,16 @@ export class Log {
                 }
             }),
             fatal = new winston.transports.File({
-                filename: 'fatal.log',
+                filename: 'error.log',
                 dirname: dirName ? dirName : './log',
                 level: 'error',
+                json: false,
                 timestamp: () => {
                     return moment().format('YYYY-MM-DD HH:mm:ss');
+                },
+                formatter: (options) => {
+                    return options.timestamp() + ',' + myCustomLevels.levels[options.level] + ',' +
+                        (options.message ? options.message : '');
                 }
             });
 

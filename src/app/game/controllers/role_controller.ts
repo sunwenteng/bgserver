@@ -9,11 +9,10 @@ import {Log} from "../../../lib/util/log";
 import {RedisMgr, RedisType} from "../../../lib/redis/redis_mgr";
 import {GameWorld} from "../game_world";
 import {Global} from "../../../lib/util/global";
-import {randInt} from "../../../lib/util/game_util";
 import * as WorldDB from '../../../lib/mysql/world_db';
 import * as LoginDB from '../../../lib/mysql/login_db';
 import {ERROR_CODE} from "../../../lib/util/error_code";
-import {gameNow, realNow} from "../../../lib/util/time";
+import {gameNow} from "../../../lib/util/time";
 
 @JsonController('/role')
 export class RoleController {
