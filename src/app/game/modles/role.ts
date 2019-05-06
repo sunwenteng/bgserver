@@ -11,8 +11,8 @@ import * as LoginDB from "../../../lib/mysql/login_db";
 import {GM_TYPE} from "../../gm/gm_struct";
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
-import {BGField, BGObject, EBGValueType, EDirtyType} from "../../../lib/util/bg_util";
-import {Item, ItemModel} from "./item_model";
+import {BGField, BGObject, EBGValueType} from "../../../lib/util/bg_util";
+import {ItemModel} from "./item_model";
 import {S2C} from "../../proto/s2c";
 
 export const roleRedisPrefix: string = 'hash_role';
@@ -43,7 +43,8 @@ export class Role extends BGObject {
     loginDeviceType: string = '';
     consumeInfo: IConsumeInfo[] = [];
 
-    /*start of default*/
+    // NOTE: 声明的属性必须都在mysql有相应列做存储
+    /*start of declaration*/
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true) gmAuth: GM_TYPE = GM_TYPE.NORMAL;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeLastGm: number = 0;
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8) state: ERoleState = ERoleState.normal;
@@ -51,11 +52,8 @@ export class Role extends BGObject {
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true) createTime: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeDaily = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeWeekly = 0;
-    /*end of default*/
-
-    // NOTE: 声明的属性必须都在mysql有相应列做存储
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) uid: number = 0;
-    @BGMysql(EMysqlValueType.string, 256) @BGField(EBGValueType.string, true, true) nickname: string = '';
+    @BGMysql(EMysqlValueType.string) @BGField(EBGValueType.string, true, true) nickname: string = '';
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) gender: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) iconId: number = 0;
     @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, true, true) exp: number = 0;
@@ -65,8 +63,9 @@ export class Role extends BGObject {
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) vipLevel: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) guildId: number = 0;
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.boolean, true, true) valid: boolean = false;
-
     @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true, true) itemModel: ItemModel = new ItemModel(this);
+
+    /*end of declaration*/
 
     constructor(uid: number, session?: GameSession) {
         super();
@@ -155,9 +154,6 @@ export class Role extends BGObject {
         this.level = 1;
         // TODO
 
-        this.itemModel.itemMap.set(1, new Item(1, 1, 1));
-        this.itemModel.itemMap.set(2, new Item(2, 2, 1));
-        this.itemModel.itemMap.set(3, new Item(3, 3, 1));
         this.computeCombat();
 
         // deprecated ban role create from ip

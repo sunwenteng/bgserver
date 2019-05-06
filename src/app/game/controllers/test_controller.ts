@@ -45,7 +45,10 @@ export class TestController {
     async hello(@QueryParams() params) {
         // this.resourceService.test();
         let uid = params['uid'] ? params['uid'] : 1;
-        let roleB = new Role(uid);
+        let roleB = new Role(uid, new GameSession());
+
+        roleB.sendProtocol(S2C.SC_GET_REWARD.create());
+
         let exist = await roleB.load();
         if (!exist) {
             await roleB.create('haha' + uid);
@@ -54,7 +57,11 @@ export class TestController {
         let len = roleB.itemModel.itemMap.length;
         if (len < 3000) {
             for (let i = len; i < len + 100; ++i) {
-                roleB.itemModel.itemMap.set(i, new Item(i, 1, 1));
+                let item = new Item();
+                item.id = i;
+                item.cnt = 1;
+                item.uid = i;
+                roleB.itemModel.itemMap.set(i, item);
             }
         }
 

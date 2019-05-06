@@ -28,7 +28,9 @@ export abstract class UserSession extends events.EventEmitter {
     }
 
     public send(data: Buffer | string | Uint8Array | ArrayBuffer): void {
-        this.socket.send(data);
+        if (this.socket) {
+            this.socket.send(data);
+        }
     }
 
     public online() {
@@ -53,7 +55,7 @@ export abstract class UserSession extends events.EventEmitter {
 
     public sendProtocol(data: any) {
         try {
-            Log.sDebug('socketUid=%d send %s=%j', this.socket.uid, data.constructor.name, data);
+            Log.sDebug('socketUid=%d send %s=%j', this.socket ? this.socket.uid : 0, data.constructor.name, data);
             let msg = S2C.Message.create();
             let name = data.constructor.name;
             if (msg.hasOwnProperty(name)) {
@@ -69,7 +71,6 @@ export abstract class UserSession extends events.EventEmitter {
             // finalBuffer.writeUint16();
             finalBuffer.writeUint16(msgIdx);
             finalBuffer.append(buffer);
-
             this.send(finalBuffer.buffer.slice(0, finalBuffer.offset));
         }
         catch (e) {
