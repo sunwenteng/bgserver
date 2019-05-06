@@ -13,6 +13,7 @@ import * as WorldDB from '../../../lib/mysql/world_db';
 import * as LoginDB from '../../../lib/mysql/login_db';
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {gameNow} from "../../../lib/util/time";
+import {EActionCheckType} from "../modles/defines";
 
 @JsonController('/role')
 export class RoleController {
@@ -20,7 +21,7 @@ export class RoleController {
     @Inject()
     resourceService: ResourceService;
 
-    @BGAction()
+    @BGAction(EActionCheckType.noCheck)
     async online(session: GameSession, pck: Zombie.Session_Init) {
         let roleId = parseInt(pck.uId);
         let role = new Role(roleId);
