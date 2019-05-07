@@ -12,7 +12,7 @@ import * as WorldDB from "../../lib/mysql/world_db";
 import {
     BMap,
     GlobalKeyType,
-    GM_RES_RELOAD_FLAG,
+    GM_RES_RELOAD_FLAG, IController,
     MSG_ID_ACK_MSG,
     MSG_ID_HEART_BEAT,
     MSG_ID_SESSION_INIT
@@ -29,6 +29,7 @@ import {BGObject} from "../../lib/util/bg_util";
 import {S2C} from "../proto/s2c";
 import {C2S} from "../proto/c2s";
 import {RoleController} from "./controllers/role_controller";
+import {handlerMapping} from "./schema_generated/msg";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',
@@ -133,11 +134,6 @@ async function downloadConfigAndReload(url: string): Promise<boolean> {
     });
 }
 
-interface IController {
-    controller: Function | any;
-    action: Function;
-}
-
 export class GameWorld extends events.EventEmitter {
     public _isUpdating: boolean;
     public static instance = new GameWorld();
@@ -167,7 +163,7 @@ export class GameWorld extends events.EventEmitter {
                             for (let roleId in this._authedSessionMap) {
                                 let session: GameSession = this._authedSessionMap[roleId];
                                 if (session.role && session.role.serverId === msg.serverId) {
-                                    session.sendProtocol(finalData);
+                                    session.role.sendProtocol(finalData);
                                     session.closeSocket();
                                     await session.offline();
                                 }
@@ -200,12 +196,13 @@ export class GameWorld extends events.EventEmitter {
                 switch (message) {
                     case EWorldMsg.KICK: {
                         Log.sInfo('role %d online, then kick', roleId);
-                        session.sendProtocol(S2C.SC_ROLE_OFFLINE.create({type: EOfflineReason.KICK}));
+                        session.role.sendProtocol(S2C.SC_ROLE_OFFLINE.create({type: EOfflineReason.KICK}));
                         session.closeSocket();
                         await session.offline();
                         break;
                     }
                     default: {
+                        // TODO this is not right need mod
                         let msg = JSON.parse(message);
                         let protoMsg = S2C.Message.fromObject(msg.data);
                         session.socket.send(S2C.Message.encode(protoMsg).finish());
@@ -290,49 +287,7 @@ export class GameWorld extends events.EventEmitter {
     }
 
     private registerController(): void {
-        for (let cmd in C2S.Message.prototype) {
-            if (!C2S.Message.prototype.hasOwnProperty(cmd)) {
-                continue;
-            }
-            if (cmd.indexOf('CS') !== -1 && cmd.indexOf('LOGIN_') === -1) {
-                let arr = cmd.split('_');
-                if (arr.length > 2) {
-                    let controllerPath = __dirname + '/controllers/' + arr[1].toLowerCase() + '_controller.js';
-                    if (!fs.existsSync(controllerPath)) {
-                        Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller not exists');
-                    }
-                    else {
-                        for (let i = 0; i < arr.length; ++i) {
-                            if (i > 2) {
-                                arr[i] = GameUtil.capitalize(arr[i]);
-                            }
-                            else {
-                                arr[i] = arr[i].toLowerCase();
-                            }
-                        }
-                        const method = arr.slice(2, arr.length).join('');
-                        const module = require('./controllers/' + arr[1].toLowerCase() + '_controller');
-                        const moduleClass = module[GameUtil.capitalize(arr[1]) + 'Controller'];
-                        if (!moduleClass) {
-                            Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller not exists');
-                        }
-                        else if (!moduleClass.prototype[method]) {
-                            Log.sWarn('cmd=' + cmd + ', controller=' + arr[1].toLowerCase() + '_controller, method=' + method + ' not exists');
-                        }
-                        else {
-                            if (!Container.has(moduleClass)) {
-                                Container.set(moduleClass, new moduleClass());
-                            }
-                            this._allControllers[cmd] = {
-                                controller: Container.get(moduleClass),
-                                action: Container.get(moduleClass)[method]
-                            };
-                        }
-                    }
-                }
-            }
-        }
-
+        // TODO
         this.registerControllerManual();
     }
 

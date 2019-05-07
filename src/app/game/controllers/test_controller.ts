@@ -5,7 +5,7 @@ import * as uuid from 'uuid';
 import {EActionCheckType} from "../modles/defines";
 import {Inject} from "typedi";
 import {ResourceService} from "../services/resource_service";
-import {Item} from "../modles/item_model";
+import {Item} from "../schema_generated/item_model";
 import {C2S} from "../../proto/c2s";
 import {S2C} from "../../proto/s2c";
 import {Post} from "routing-controllers/decorator/Post";
@@ -55,7 +55,9 @@ export class TestController {
             await roleB.create('haha' + uid);
         }
 
-        roleB.testArray.push(1);
+        roleB.sendFull();
+
+        // roleB.testArray.push(1);
 
         let len = roleB.itemModel.itemMap.length;
         if (len < 3000) {
@@ -68,26 +70,29 @@ export class TestController {
             }
         }
 
-        for (let i = 0; i < 100; ++i) {
-            let e = roleB.itemModel.itemMap.get(i);
-            if (e) {
-                e.cnt = Math.floor(Math.random() * 100);
-            }
-        }
+        // for (let i = 1; i <= params['cnt']; ++i) {
+        //     let e = roleB.itemModel.itemMap.get(i);
+        //     while (e) {
+        //         let cnt = Math.floor(Math.random() * 100);
+        //         if (cnt !== e.cnt) {
+        //             e.cnt = cnt;
+        //             break;
+        //         }
+        //     }
+        // }
 
-        roleB.nickname = 'newHaha' + Math.floor(Math.random() * 1000);
+        roleB.combat = Math.floor(Math.random() * 1000);
 
+        roleB.sendDelta(true);
         console.log(roleB.dirtyFields());
+
         await roleB.save();
-
-        let buffer = new ByteBuffer();
-        roleB.encodeDelta(buffer);
         console.log(roleB.dirtyFields());
 
-        for (let i = 0; i < 2000; i++) {
-            roleB.combat = i;
-            roleB.save();
-        }
+        // for (let i = 0; i < 2000; i++) {
+        //     roleB.combat = i;
+        //     roleB.save();
+        // }
 
         return 'hello my len=' + roleB.itemModel.itemMap.length;
     }

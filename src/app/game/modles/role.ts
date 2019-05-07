@@ -8,12 +8,13 @@ import {BGMysql} from "../../../lib/util/descriptor";
 import {ConfigMgr} from "../../../config/data/config_struct";
 import * as util from "util";
 import * as LoginDB from "../../../lib/mysql/login_db";
-import {GM_TYPE} from "../../gm/gm_struct";
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
-import {BGArray, BGField, BGObject, EBGValueType} from "../../../lib/util/bg_util";
-import {ItemModel} from "./item_model";
+import {BGField, EBGValueType} from "../../../lib/util/bg_util";
 import {S2C} from "../../proto/s2c";
+import * as ByteBuffer from "bytebuffer";
+import {RoleModel} from "../schema_generated/role_model";
+import {decodeMapping} from "../schema_generated/msg";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';
@@ -32,9 +33,10 @@ interface IConsumeInfo {
     diamondPaidUse: number;
 }
 
-export class Role extends BGObject {
+export class Role extends RoleModel {
     _session: GameSession;
     _endProtocol: any = null;
+    _endProtocolId: number = null;
 
     // 一些临时数据，不做任何存储，只适用于在线用户的一些临时数据
     serverId: number = 0;
@@ -43,31 +45,12 @@ export class Role extends BGObject {
     loginDeviceType: string = '';
     consumeInfo: IConsumeInfo[] = [];
 
-    // NOTE: 声明的属性必须都在mysql有相应列做存储
-    /*start of declaration*/
-    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8) gmAuth: GM_TYPE = GM_TYPE.NORMAL;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) timeLastGm: number = 0;
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, false) state: ERoleState = ERoleState.normal;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) lastLoginTime: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) createTime: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) timeDaily = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) timeWeekly = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) uid: number = 0;
-    @BGMysql(EMysqlValueType.string) @BGField(EBGValueType.string, true, true) nickname: string = '';
-    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) gender: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) iconId: number = 0;
-    @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, true, true) exp: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) level: number = 0;
-    @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, true, true) combat: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) vipExp: number = 0;
-    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) vipLevel: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) guildId: number = 0;
-    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.boolean, true, true) valid: boolean = false;
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object) itemModel: ItemModel = new ItemModel(this);
-    // TODO for test
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.uint32, false) testArray: BGArray<number> = new BGArray(this);
-
-    /*end of declaration*/
 
     constructor(uid: number, session?: GameSession) {
         super();
@@ -85,7 +68,7 @@ export class Role extends BGObject {
         if (!saveData || Object.keys(saveData).length === 0) {
             return;
         }
-        // this.clearDirty();
+        this.clearDirty();
         // 同步存储到redis
         Log.sDebug('%s:%j', Role.getRedisKey(this.uid), saveData);
         await RedisMgr.getInstance(RedisType.GAME).hmset(Role.getRedisKey(this.uid), saveData, ROLE_REDIS_EXPIRE_TIME);
@@ -173,20 +156,26 @@ export class Role extends BGObject {
     }
 
     public sendProtocol(msg: any, bIsEndProtocol: boolean = false) {
+        let msgId = decodeMapping[msg.constructor.name];
+        if (!msgId) {
+            throw new Error(`message ${msg.constructor.name} not found in decodeMapping`);
+        }
         if (bIsEndProtocol) {
             this._endProtocol = msg;
+            this._endProtocolId = msgId;
             return;
         }
 
         if (this._session) {
-            this._session.sendProtocol(msg);
+            this._session.sendProtocol(msgId, msg);
         }
     }
 
     public sendEndProtocol() {
         if (this._endProtocol) {
-            this.sendProtocol(this._endProtocol);
+            this.sendProtocol(this._endProtocolId, this._endProtocol);
             this._endProtocol = null;
+            this._endProtocolId = null;
         }
     }
 
@@ -196,12 +185,20 @@ export class Role extends BGObject {
             if (code !== ERROR_CODE.NO_ERROR) {
                 Log.uWarnParent(this.uid, 'code=%d, msg=%s', code, msg);
             }
-            this._session.sendProtocol(S2C.Error.create({id: parseInt(code.toString())}));
+            this._session.sendProtocol(404, S2C.Error.create({id: parseInt(code.toString())}));
         }
     }
 
-    public sendProUpdate(bAll: boolean = false) {
-        // TODO
+    public sendFull(bDebug: boolean = false) {
+        let buffer = new ByteBuffer();
+        this.encodeFull(buffer);
+        Log.uDebug(this.uid, 'byte len=%d', buffer.offset);
+    }
+
+    public sendDelta(bDebug: boolean = false) {
+        let buffer = new ByteBuffer();
+        this.encodeDelta(buffer);
+        Log.uDebug(this.uid, 'byte len=%d', buffer.offset);
     }
 
     public async setAlive() {
@@ -209,7 +206,6 @@ export class Role extends BGObject {
     }
 
     public async notify() {
-        this.sendProUpdate();
         this.sendEndProtocol();
         // await RankController.instance.notify();
     }
@@ -317,7 +313,7 @@ export class Role extends BGObject {
                     await LoginDB.conn.execute('update charge_info set ? where ?', [{state: LoginDB.EChargeState.distributed}, {auto_id: result.auto_id}]);
                     await this.syncDataToLogin();
                 }
-                this.sendProUpdate();
+                this.sendDelta();
                 await this.save();
                 this.sendProtocol(S2C.SC_UPDATE_RECHARGE.create());
                 Log.uInfo(this.uid, 'finish process charge_info len=' + results.length);

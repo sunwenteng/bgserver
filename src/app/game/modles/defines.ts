@@ -8,6 +8,11 @@ export const WEEK = 7 * DAY;
 
 export let GM_RES_RELOAD_FLAG = '.todo';
 
+export interface IController {
+    controller: Function | any;
+    action: Function;
+}
+
 export enum ETimeType {
     none = 0,
     role = 1,

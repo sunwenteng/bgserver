@@ -53,22 +53,16 @@ export abstract class UserSession extends events.EventEmitter {
         return this._curMsgIdx;
     }
 
-    public sendProtocol(data: any) {
+    public sendProtocol(msgId:number, data?: any) {
         try {
             Log.sDebug('socketUid=%d send %s=%j', this.socket ? this.socket.uid : 0, data.constructor.name, data);
-            let msg = S2C.Message.create();
-            let name = data.constructor.name;
-            if (msg.hasOwnProperty(name)) {
-                Log.sError('S2C have no packet, ' + name);
-                return;
-            }
-            msg[data.constructor.name] = data;
+
             let buffer = S2C.Message.encode(msg).finish();
 
             let msgIdx = this.getNextMsgIdx();
             let finalBuffer = new ByteBuffer();
             finalBuffer.writeUint32(buffer.length + MSG_HEADER_TOTAL_BYTES);
-            // finalBuffer.writeUint16();
+            finalBuffer.writeUint16(msgId);
             finalBuffer.writeUint16(msgIdx);
             finalBuffer.append(buffer);
             this.send(finalBuffer.buffer.slice(0, finalBuffer.offset));

@@ -112,7 +112,7 @@ function encodeDefaultType(o: IField, buffer: ByteBuffer) {
             buffer.writeInt64(o.value as number);
             break;
         case EBGValueType.string:
-            buffer.writeString(o.value as string);
+            buffer.writeIString(o.value as string);
             break;
         case EBGValueType.bytes:
             buffer.writeBytes(o.value as string);
@@ -212,6 +212,9 @@ export abstract class BGObject {
         buffer.writeUint32(Object.keys(this.__fields).length);
         for (let k in this.__fields) {
             const o: IField = this.__fields[k];
+            if (!o.dynamic) {
+                continue;
+            }
             if (o.value instanceof BGObject) {
                 o.value.encodeFull(buffer, o.uid);
             }
@@ -219,7 +222,7 @@ export abstract class BGObject {
                 encodeDefaultType(o, buffer);
             }
         }
-        this.clearDirty();
+        // this.clearDirty();
     }
 
     /**
@@ -262,7 +265,7 @@ export abstract class BGObject {
         }
         buffer.writeUint32(modCnt);
         buffer.append(modBuffer.slice(0, modBuffer.offset));
-        this.clearDirty();
+        // this.clearDirty();
     }
 
     toObject(bAll?: boolean): { [key: string]: any } {
@@ -446,7 +449,7 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
             case EDeltaOpt.INSERT:
             case EDeltaOpt.UPDATE_FULL:
                 this._binlog.writeUint32(opt);
-                this._binlog.writeString(k);
+                this._binlog.writeIString(k);
                 break;
             default:
                 break;
@@ -488,7 +491,7 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
                 }, buffer);
             }
         }
-        this.clearDirty();
+        // this.clearDirty();
     }
 
     encodeDelta(buffer: ByteBuffer, selfUid?: number) {
@@ -496,26 +499,26 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
             buffer.writeUint32(selfUid);
         }
 
-        if (this._valueT=== EBGValueType.object) {
+        if (this._valueT === EBGValueType.object) {
             for (let k in this._data) {
                 let value = this._data[k] as BGObject;
                 if (value.dirty === EDirtyType.EDT_DIRTY_FULL) {
                     ++this._binlogCnt;
                     this._binlog.writeUint32(EDeltaOpt.UPDATE_FULL);
-                    this._binlog.writeString(k);
+                    this._binlog.writeIString(k);
                     value.encodeFull(this._binlog, 0);
                 }
                 else if (value.dirty === EDirtyType.EDT_DIRTY_MOD) {
                     ++this._binlogCnt;
                     this._binlog.writeUint32(EDeltaOpt.UPDATE_DELTA);
-                    this._binlog.writeString(k);
+                    this._binlog.writeIString(k);
                     value.encodeDelta(this._binlog, 0);
                 }
             }
         }
         buffer.writeUint32(this._binlogCnt);
         buffer.append(this._binlog.slice(0, this._binlog.offset));
-        this.clearDirty();
+        // this.clearDirty();
     }
 
     toObject(): { [key: string]: any } {
@@ -716,7 +719,7 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
                 }, buffer);
             }
         }
-        this.clearDirty();
+        // this.clearDirty();
     }
 
     encodeDelta(buffer: ByteBuffer, selfUid?: number) {
@@ -730,20 +733,20 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
                 if (value.dirty === EDirtyType.EDT_DIRTY_FULL) {
                     ++this._binlogCnt;
                     this._binlog.writeUint32(EDeltaOpt.UPDATE_FULL);
-                    this._binlog.writeString(k);
+                    this._binlog.writeIString(k);
                     value.encodeFull(this._binlog, 0);
                 }
                 else if (value.dirty === EDirtyType.EDT_DIRTY_MOD) {
                     ++this._binlogCnt;
                     this._binlog.writeUint32(EDeltaOpt.UPDATE_DELTA);
-                    this._binlog.writeString(k);
+                    this._binlog.writeIString(k);
                     value.encodeDelta(this._binlog, 0);
                 }
             }
         }
         buffer.writeUint32(this._binlogCnt);
         buffer.append(this._binlog.slice(0, this._binlog.offset));
-        this.clearDirty();
+        // this.clearDirty();
     }
 
     toObject(): any[] {
