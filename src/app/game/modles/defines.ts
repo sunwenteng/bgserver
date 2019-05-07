@@ -6,7 +6,9 @@ export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
 export const WEEK = 7 * DAY;
 
-export let GM_RES_RELOAD_FLAG = '.todo';
+export const MAX_NAME_LENGTH = 18;
+
+export const GM_RES_RELOAD_FLAG = '.todo';
 
 export interface IController {
     controller: Function | any;
