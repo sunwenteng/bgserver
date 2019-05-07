@@ -10,6 +10,7 @@ import {C2S} from "../../proto/c2s";
 import {S2C} from "../../proto/s2c";
 import {Post} from "routing-controllers/decorator/Post";
 import {GameSession} from "../game_session";
+import * as ByteBuffer from "bytebuffer";
 
 @JsonController('/test')
 export class TestController {
@@ -54,6 +55,8 @@ export class TestController {
             await roleB.create('haha' + uid);
         }
 
+        roleB.testArray.push(1);
+
         let len = roleB.itemModel.itemMap.length;
         if (len < 3000) {
             for (let i = len; i < len + 100; ++i) {
@@ -71,7 +74,15 @@ export class TestController {
                 e.cnt = Math.floor(Math.random() * 100);
             }
         }
-        await roleB.save(true);
+
+        roleB.nickname = 'newHaha' + Math.floor(Math.random() * 1000);
+
+        console.log(roleB.dirtyFields());
+        await roleB.save();
+
+        let buffer = new ByteBuffer();
+        roleB.encodeDelta(buffer);
+        console.log(roleB.dirtyFields());
 
         for (let i = 0; i < 2000; i++) {
             roleB.combat = i;

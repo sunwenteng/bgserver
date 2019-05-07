@@ -11,7 +11,7 @@ import * as LoginDB from "../../../lib/mysql/login_db";
 import {GM_TYPE} from "../../gm/gm_struct";
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
-import {BGField, BGObject, EBGValueType} from "../../../lib/util/bg_util";
+import {BGArray, BGField, BGObject, EBGValueType} from "../../../lib/util/bg_util";
 import {ItemModel} from "./item_model";
 import {S2C} from "../../proto/s2c";
 
@@ -45,13 +45,13 @@ export class Role extends BGObject {
 
     // NOTE: 声明的属性必须都在mysql有相应列做存储
     /*start of declaration*/
-    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true) gmAuth: GM_TYPE = GM_TYPE.NORMAL;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeLastGm: number = 0;
-    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8) state: ERoleState = ERoleState.normal;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false, true) lastLoginTime: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true) createTime: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeDaily = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) timeWeekly = 0;
+    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8) gmAuth: GM_TYPE = GM_TYPE.NORMAL;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) timeLastGm: number = 0;
+    @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, false) state: ERoleState = ERoleState.normal;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) lastLoginTime: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) createTime: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) timeDaily = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) timeWeekly = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) uid: number = 0;
     @BGMysql(EMysqlValueType.string) @BGField(EBGValueType.string, true, true) nickname: string = '';
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) gender: number = 0;
@@ -59,11 +59,13 @@ export class Role extends BGObject {
     @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, true, true) exp: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) level: number = 0;
     @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, true, true) combat: number = 0;
-    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true) vipExp: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32) vipExp: number = 0;
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, true, true) vipLevel: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, true, true) guildId: number = 0;
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.boolean, true, true) valid: boolean = false;
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true, true) itemModel: ItemModel = new ItemModel(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object) itemModel: ItemModel = new ItemModel(this);
+    // TODO for test
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.uint32, false) testArray: BGArray<number> = new BGArray(this);
 
     /*end of declaration*/
 
@@ -83,7 +85,7 @@ export class Role extends BGObject {
         if (!saveData || Object.keys(saveData).length === 0) {
             return;
         }
-        this.clearDirty();
+        // this.clearDirty();
         // 同步存储到redis
         Log.sDebug('%s:%j', Role.getRedisKey(this.uid), saveData);
         await RedisMgr.getInstance(RedisType.GAME).hmset(Role.getRedisKey(this.uid), saveData, ROLE_REDIS_EXPIRE_TIME);

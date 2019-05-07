@@ -1,6 +1,6 @@
 /**
  * BGField descriptor must has a default value
- * @param type
+ * @param type -- proto type to send to client
  * @param dynamic
  * @param snapshot
  * @param rankKey
@@ -8,7 +8,7 @@
  */
 import * as ByteBuffer from "bytebuffer";
 
-export function BGField(type: EBGValueType, dynamic: boolean = false, snapshot: boolean = false, rankKey: any = null) {
+export function BGField(type: EBGValueType, dynamic: boolean = true, snapshot: boolean = false, rankKey: any = null) {
     return (target: Object, key: string): void => {
         Object.defineProperty(target, key, {
             get: function () {
@@ -170,11 +170,14 @@ export abstract class BGObject {
         }
         this.__dirty = EDirtyType.EDT_DIRTY_MOD;
         let parent = this.__parent, self: BGObject = this;
-        while (parent && parent.__dirty === EDirtyType.EDT_OK) {
-            parent.__dirty = EDirtyType.EDT_DIRTY_MOD;
+        while (parent) {
             if (self.__key !== undefined) {
                 parent.__fields[self.__key].dirty = EDirtyType.EDT_DIRTY_MOD;
             }
+            if (parent.__dirty !== EDirtyType.EDT_OK) {
+                break;
+            }
+            parent.__dirty = EDirtyType.EDT_DIRTY_MOD;
             self = parent;
             parent = parent.__parent;
         }
@@ -235,6 +238,9 @@ export abstract class BGObject {
         let modCnt = 0;
         for (let k in this.__fields) {
             const o: IField = this.__fields[k];
+            if (!o.dynamic) {
+                continue;
+            }
             if (o.dirty === EDirtyType.EDT_DIRTY_MOD) {
                 ++modCnt;
                 if (o.value instanceof BGObject) {
@@ -285,7 +291,7 @@ export abstract class BGObject {
                 continue;
             }
 
-            if (o.type === EBGValueType.object) {
+            if (o.value instanceof BGObject) {
                 (o.value as BGObject).fromObject(d);
             }
             else {
@@ -297,7 +303,7 @@ export abstract class BGObject {
     public decodeDB(reply: { [key: string]: any }): void {
         for (let k in this.__fields) {
             let f = this.__fields[k].value;
-            if (!reply[k] !== undefined) {
+            if (reply[k] !== undefined) {
                 switch (typeof f) {
                     case "number":
                     case "boolean":
@@ -458,6 +464,8 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
                 v.clearDirty();
             }
         }
+        this._binlog.clear();
+        this._binlogCnt = 0;
     }
 
     encodeFull(buffer: ByteBuffer, selfUid?: number) {
@@ -488,7 +496,7 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
             buffer.writeUint32(selfUid);
         }
 
-        if (typeof this._valueT === 'function') {
+        if (this._valueT=== EBGValueType.object) {
             for (let k in this._data) {
                 let value = this._data[k] as BGObject;
                 if (value.dirty === EDirtyType.EDT_DIRTY_FULL) {
@@ -529,6 +537,7 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
             let d = reply[k];
             if (this._valueT === EBGValueType.object) {
                 let t = new this._typeT();
+                (t as BGObject).parent = this;
                 (t as BGObject).fromObject(d);
                 this._data[k] = t;
                 this._length++;
@@ -683,6 +692,8 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
                 v.clearDirty();
             }
         }
+        this._binlog.clear();
+        this._binlogCnt = 0;
     }
 
     encodeFull(buffer: ByteBuffer, selfUid?: number) {
@@ -754,6 +765,7 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
             let d = reply[k];
             if (this._valueT === EBGValueType.object) {
                 let t = new this._typeT();
+                (t as BGObject).parent = this;
                 (t as BGObject).fromObject(d);
                 this._data.push(t);
             }
