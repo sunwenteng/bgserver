@@ -16,19 +16,6 @@ export class LoginSession extends UserSession {
     clientVersion: string = '';
     device: string = '';
 
-    constructor() {
-        super();
-        this.on('message', (data) => {
-            try {
-                let msg = C2S.Message.decode(data);
-                this.pushPacket(msg);
-            }
-            catch (e) {
-                Log.sError(e);
-            }
-        });
-    }
-
     public async update() {
         let packet,
             counter = 0,
@@ -242,7 +229,7 @@ export class LoginSession extends UserSession {
 
         pck.serverId = lastLoginServer;
         pck.gmAuth = this.gmAuth;
-        this.sendProtocol(pck);
+        this.sendProto(pck);
     }
 
     public async handleGetServerList() {
@@ -277,7 +264,7 @@ export class LoginSession extends UserSession {
                 pck.servers.push(serverPck);
             }
         }
-        this.sendProtocol(pck);
+        this.sendProto(pck);
     }
 
     public handleGetInfo(packet: C2S.LOGIN_CS_GET_INFO) {
@@ -304,7 +291,7 @@ export class LoginSession extends UserSession {
             pck.updateAddress = '';
         }
 
-        this.sendProtocol(pck);
+        this.sendProto(pck);
     }
 
     public async handleChooseServer(packet: C2S.LOGIN_CS_CHOOSE_SERVER) {
@@ -340,7 +327,7 @@ export class LoginSession extends UserSession {
             pck.serverId = server.server_id;
             pck.serverName = server.server_name;
 
-            this.sendProtocol(pck);
+            this.sendProto(pck);
         }
     }
 
@@ -360,11 +347,11 @@ export class LoginSession extends UserSession {
             replyMsg.success = true;
         }
         while (0);
-        this.sendProtocol(replyMsg);
+        this.sendProto(replyMsg);
     }
 
     public handleHeartBeat(packet: C2S.CS_ROLE_HEART_BEAT) {
         this.timeLastAlive = realNow();
-        this.sendProtocol(S2C.SC_ROLE_HEART_BEAT.create());
+        this.sendProto(S2C.SC_ROLE_HEART_BEAT.create());
     }
 }

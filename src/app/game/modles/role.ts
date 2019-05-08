@@ -14,7 +14,7 @@ import {BGField, EBGValueType} from "../../../lib/util/bg_util";
 import {S2C} from "../../proto/s2c";
 import * as ByteBuffer from "bytebuffer";
 import {RoleModel} from "../schema_generated/role_model";
-import {decodeMapping} from "../schema_generated/msg";
+import {getMsgId} from "../schema_generated/msg";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';
@@ -156,7 +156,7 @@ export class Role extends RoleModel {
     }
 
     public sendProtocol(msg: any, bIsEndProtocol: boolean = false) {
-        let msgId = decodeMapping[msg.constructor.name];
+        let msgId = getMsgId(msg.constructor.name);
         if (!msgId) {
             throw new Error(`message ${msg.constructor.name} not found in decodeMapping`);
         }
