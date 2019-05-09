@@ -177,7 +177,7 @@ export class GameWorld extends events.EventEmitter {
                             let session: GameSession = this._authedSessionMap[roleId];
                             if ((msg.serverId !== 0 && session.role.serverId === msg.serverId) ||
                                 (msg.guildId !== 0 && session.role.guildId === msg.guildId) ||
-                                (!msg.guildId && !msg.serverId)) {
+                                (msg.groupId !== 0 && GameWorld.instance.info.group_id === msg.groupId)) {
                                 session.socket.send(finalData);
                             }
                         }
@@ -507,7 +507,7 @@ export class GameWorld extends events.EventEmitter {
     public static async sendProtoToAll(msg: any) {
         let proto = S2C.Message.create();
         proto[msg.constructor.name] = msg;
-        let data = {data: proto.toJSON()};
+        let data = {groupId: GameWorld.instance.info.group_id, data: proto.toJSON()};
         await RedisMgr.getInstance(RedisType.GAME).publish(RedisChanel.BROADCAST, JSON.stringify(data));
     }
 
