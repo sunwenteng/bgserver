@@ -18,7 +18,7 @@ import {EActionCheckType, MSG_ID_SESSION_INIT_COMPLETE} from "../modles/defines"
 @JsonController('/role')
 export class RoleController {
 
-    @Inject()
+    @Inject(ResourceService.name)
     resourceService: ResourceService;
 
     @BGAction(EActionCheckType.noCheck)
