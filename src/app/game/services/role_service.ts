@@ -5,7 +5,7 @@ import {charCodeLength, filterString} from "../../../lib/util/game_util";
 import {MAX_NAME_LENGTH} from "../modles/defines";
 import * as WorldDB from '../../../lib/mysql/world_db';
 
-@Service()
+@Service(RoleService.name)
 export class RoleService {
 
     async checkName(role: Role, name: string, serverId: number): Promise<boolean> {

@@ -15,7 +15,7 @@ import * as ByteBuffer from "bytebuffer";
 @JsonController('/test')
 export class TestController {
 
-    @Inject()
+    @Inject(ResourceService.name)
     resourceService: ResourceService;
 
     @BGAction(EActionCheckType.noCheck)
@@ -44,7 +44,7 @@ export class TestController {
     @execTime(false)
     @Get()
     async hello(@QueryParams() params) {
-        // this.resourceService.test();
+        this.resourceService.test();
         let uid = params['uid'] ? params['uid'] : 1;
         let roleB = new Role(uid, new GameSession());
 
