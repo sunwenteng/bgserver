@@ -108,7 +108,7 @@ describe('bg_util', () => {
 
         role.timeMap.get(1).array.insert(1, new TestInnest(1.5, 1.5));
         expect(role.timeMap.get(1).array.length).eq(5);
-        expect(role.timeMap.get(1).array.find(new TestInnest(1.5, 1.5), (a, b)=> {
+        expect(role.timeMap.get(1).array.find(new TestInnest(1.5, 1.5), (a, b) => {
             return a.uid - b.uid;
         }).length).eq(2);
 

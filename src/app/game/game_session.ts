@@ -6,6 +6,13 @@ import {Role, roleRedisPrefix} from "./modles/role";
 import {execTime} from "../../lib/util/descriptor";
 import {IntervalTimer, realNow} from "../../lib/util/time";
 import * as LoginDB from '../../lib/mysql/login_db';
+import {
+    IController,
+    IHandler,
+    MSG_HEADER_LEN_BYTES,
+    MSG_HEADER_MSG_ID_BYTES,
+    MSG_HEADER_MSG_IDX_BYTES
+} from "./modles/defines";
 
 const MAX_PACKET_COUNT = 10000;
 
@@ -16,64 +23,37 @@ export class GameSession extends UserSession {
     updatePlayerCharge: IntervalTimer = new IntervalTimer(1);
     updatePlayerAct: IntervalTimer = new IntervalTimer(1);
 
-    //private _isUpdating = false;
+    constructor() {
+        super();
 
-    @execTime(false)
-    private async doAction(action: Function, session: GameSession, packet: any) {
-        if ('CS_ROLE_HEART_BEAT' !== packet.kind) {
-            Log.uInfo(this.role ? this.role.uid : 0, 'serverId=%d, socketUid=%d, roleId=%d, name=%s, data=%j', this.role ? this.role.serverId : 0, this.socket.uid, this.role ? this.role.uid : 0, packet.kind, packet[packet.kind]);
-        }
-        else {
-            Log.uDebug(this.role ? this.role.uid : 0, 'serverId=%d, socketUid=%d, roleId=%d, name=%s, data=%j', this.role ? this.role.serverId : 0, this.socket.uid, this.role ? this.role.uid : 0, packet.kind, packet[packet.kind]);
-        }
-        await action.apply(GameWorld.instance.getController(packet[packet.kind].constructor.name), [session, packet[packet.kind]]);
+        this.on('message', (data) => {
+            try {
+                const buffer = new Buffer(data);
+                const len = buffer.readUInt32BE(0);
+                const msgId = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES);
+                const msgIdx = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
+                const controller: IController = GameWorld.instance.getController(msgId);
+                if (!controller) {
+                    Log.sError(`handleInfo parse error, len=${len}, msgId=${msgId}, msgIdx=${msgIdx}`);
+                    return;
+                }
+                const msg = controller.decoder.decode(buffer.slice(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES + MSG_HEADER_MSG_IDX_BYTES));
+                this.packets.append({...controller, msg: msg});
+            }
+            catch (e) {
+                Log.sError(e);
+            }
+        });
     }
 
-    // public async newUpdate() {
-    //     if (this._isUpdating) {
-    //         return;
-    //     }
-    //
-    //     if (this.packets.length === 0) {
-    //         return;
-    //     }
-    //
-    //     this._isUpdating = true;
-    //     let controller,
-    //         packet,
-    //         cur = this.packets.head;
-    //     if (this.packets.length > MAX_PACKET_COUNT) {
-    //         Log.sError('packet array length too long, force close socket, uid=%d, ip=%s, length=%d', this.socket.uid, this.socket.ip, this.packets.length);
-    //         this.closeSocket();
-    //     }
-    //
-    //     packet = cur.element;
-    //     this.packets.deleteNode(cur);
-    //
-    //     // if (packet.kind !== 'CS_ROLE_ONLINE' && this.role === null) {
-    //     //     Log.sError('not receive online packet yet, uid=' + this.socket.uid);
-    //     //     continue;
-    //     // }
-    //     // else if (packet.kind === 'CS_ROLE_ONLINE' && this.role !== null) {
-    //     //     Log.sError('already online, duplicate online packet, roleId=%d, socketUid=%d', this.role.uid, this.socket.uid);
-    //     //     continue;
-    //     // }
-    //
-    //     controller = GameWorld.instance.getAction(packet.kind);
-    //     if (controller) {
-    //         await this.doController(controller, this, packet);
-    //     }
-    //     else {
-    //         Log.sError('controller not found, name=%s', packet.kind);
-    //     }
-    //
-    //     this._isUpdating = false;
-    //     this.newUpdate();
-    // }
+    @execTime(false)
+    private async doAction(controller: Function, action: Function, session: GameSession, packet: any) {
+        Log.uInfo(this.role ? this.role.uid : 0, 'serverId=%d, socketUid=%d, roleId=%d, name=%s, data=%j', this.role ? this.role.serverId : 0, this.socket.uid, this.role ? this.role.uid : 0, packet.constructor.name, packet);
+        await action.apply(controller, [session, packet]);
+    }
 
     public async update() {
-        let action,
-            packet,
+        let packet: IHandler,
             counter = 0,
             cur = this.packets.head,
             t,
@@ -89,15 +69,9 @@ export class GameSession extends UserSession {
             this.packets.deleteNode(t);
             cur = cur.next;
 
-            action = GameWorld.instance.getAction(packet.kind);
-            if (action) {
-                await this.doAction(action, this, packet).catch((e) => {
-                    Log.sError(e);
-                });
-            }
-            else {
-                Log.sError('controller not found, name=%s', packet.kind);
-            }
+            await this.doAction(packet.controller, packet.action, this, packet.msg).catch((e) => {
+                Log.sError(e);
+            });
 
             // per loop do 5 packet
             if (++counter > 5) {

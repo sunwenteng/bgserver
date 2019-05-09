@@ -34,7 +34,7 @@ interface IConsumeInfo {
 }
 
 export class Role extends RoleModel {
-    _session: GameSession;
+    session: GameSession;
     _endProtocol: any = null;
     _endProtocolId: number = null;
 
@@ -54,7 +54,7 @@ export class Role extends RoleModel {
 
     constructor(uid: number, session?: GameSession) {
         super();
-        this._session = session;
+        this.session = session;
         this.uid = uid;
         this.clearDirty();
     }
@@ -75,7 +75,7 @@ export class Role extends RoleModel {
         // 往脏数据集合添加
         await RedisMgr.getInstance(RedisType.GAME).sadd(WorldDataRedisKey.DIRTY_ROLES, this.uid);
 
-        if (!this._session) {
+        if (!this.session) {
             // notify other session to reload role from redis to memory
             await RedisMgr.getInstance(RedisType.GAME).sadd(WorldDataRedisKey.RELOAD_ROLES, this.uid);
         }
@@ -142,7 +142,7 @@ export class Role extends RoleModel {
         this.computeCombat();
 
         // deprecated ban role create from ip
-        // let result = await LoginDB.conn.execute(`select status from ip_status where ip like "%${this._session.socket.ip}%"`);
+        // let result = await LoginDB.conn.execute(`select status from ip_status where ip like "%${this.session.socket.ip}%"`);
         // if (result.length > 0) {
         //     this.state = result[0].status;
         // }
@@ -166,8 +166,8 @@ export class Role extends RoleModel {
             return;
         }
 
-        if (this._session) {
-            this._session.sendProtocol(msgId, msg);
+        if (this.session) {
+            this.session.sendProtocol(msgId, msg);
         }
     }
 
@@ -180,12 +180,12 @@ export class Role extends RoleModel {
     }
 
     public sendErrorMsg(code: number, ...args: any[]) {
-        if (this._session) {
+        if (this.session) {
             let msg = util.format.apply(util, args);
             if (code !== ERROR_CODE.NO_ERROR) {
                 Log.uWarnParent(this.uid, 'code=%d, msg=%s', code, msg);
             }
-            this._session.sendProtocol(404, S2C.Error.create({id: parseInt(code.toString())}));
+            this.session.sendProtocol(404, S2C.Error.create({id: parseInt(code.toString())}));
         }
     }
 

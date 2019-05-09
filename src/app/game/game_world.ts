@@ -1,35 +1,34 @@
 import {UserSession} from '../../lib/net/user_session';
 import {LinkedList, ListNode} from '../../lib/util/linked_list';
 import * as GameUtil from '../../lib/util/game_util';
+import {createResVersionFile, getResVersion, rmAll} from '../../lib/util/game_util';
 import * as fs from 'fs';
 import {Log} from "../../lib/util/log";
 import {RedisChanel, RedisMgr, RedisType} from "../../lib/redis/redis_mgr";
 import {roleRedisPrefix} from "./modles/role";
 import * as events from "events";
 import * as time from '../../lib/util/time';
+import {IntervalTimer, realNow} from '../../lib/util/time';
 import * as LoginDB from "../../lib/mysql/login_db";
 import * as WorldDB from "../../lib/mysql/world_db";
 import {
     BMap,
     GlobalKeyType,
-    GM_RES_RELOAD_FLAG, IController,
+    GM_RES_RELOAD_FLAG,
+    IController,
     MSG_ID_ACK_MSG,
     MSG_ID_HEART_BEAT,
     MSG_ID_SESSION_INIT
 } from "./modles/defines";
-import {realNow} from "../../lib/util/time";
 import {GameSession} from "./game_session";
-import {createResVersionFile, getResVersion} from "../../lib/util/game_util";
-import {IntervalTimer} from "../../lib/util/time";
 import {ConfigMgr} from "../../config/data/config_struct";
-import {rmAll} from "../../lib/util/game_util";
 import {Global} from "../../lib/util/global";
 import {Container} from "typedi";
 import {BGObject} from "../../lib/util/bg_util";
 import {S2C} from "../proto/s2c";
-import {C2S} from "../proto/c2s";
 import {RoleController} from "./controllers/role_controller";
-import {handlerMapping} from "./schema_generated/msg";
+import {controllerMappings} from "./schema_generated/msg";
+import {Zombie} from "../proto/zombie";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',
@@ -141,7 +140,7 @@ export class GameWorld extends events.EventEmitter {
 
     private readonly _sessionList: LinkedList<UserSession> = new LinkedList<UserSession>();
     private readonly _authedSessionMap: BMap<GameSession> = {}; // 玩家上线通过后加入进来
-    private readonly _allControllers: BMap<IController> = {};
+    private _allControllers: BMap<IController> = {};
     private readonly _timer: { [mutex: string]: time.RaceTimer } = {};
     private _updateServerRedis: IntervalTimer = new IntervalTimer(3);
     private _updateServers: IntervalTimer = new IntervalTimer(5);
@@ -265,30 +264,26 @@ export class GameWorld extends events.EventEmitter {
         }
     }
 
-    public getAction(cmd: string): Function {
-        return this._allControllers[cmd].action;
-    }
+    private registerController(): void {
+        this._allControllers = {...controllerMappings};
 
-    private registerControllerManual() {
         this._allControllers[MSG_ID_SESSION_INIT] = {
-            controller: RoleController,
-            action: Container.get(RoleController).online
+            decoder: Zombie.Session_Init,
+            controller: Container.get(RoleController.name),
+            action: Container.get(RoleController.name)['online']
         };
 
         this._allControllers[MSG_ID_ACK_MSG] = {
-            controller: Container.get(RoleController),
-            action: Container.get(RoleController).ackMsg
+            decoder: Zombie.Ack_Msg,
+            controller: Container.get(RoleController.name),
+            action: Container.get(RoleController.name)['ackMsg']
         };
 
         this._allControllers[MSG_ID_HEART_BEAT] = {
-            controller: Container.get(RoleController),
-            action: Container.get(RoleController).heartBeat
+            decoder: undefined,
+            controller: Container.get(RoleController.name),
+            action: Container.get(RoleController.name)['heartBeat']
         };
-    }
-
-    private registerController(): void {
-        // TODO
-        this.registerControllerManual();
     }
 
     public async start() {
@@ -565,7 +560,7 @@ export class GameWorld extends events.EventEmitter {
     }
 
     public getController(cmd) {
-        return this._allControllers[cmd].controller;
+        return this._allControllers[cmd];
     }
 
     private async loadGlobalData<T extends BGObject>(serverId: number, globalKey: GlobalKeyType, globalDataType: new () => T): Promise<T> {

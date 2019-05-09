@@ -13,7 +13,7 @@ import * as WorldDB from '../../../lib/mysql/world_db';
 import * as LoginDB from '../../../lib/mysql/login_db';
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {gameNow} from "../../../lib/util/time";
-import {EActionCheckType} from "../modles/defines";
+import {EActionCheckType, MSG_ID_SESSION_INIT_COMPLETE} from "../modles/defines";
 
 @JsonController('/role')
 export class RoleController {
@@ -59,7 +59,7 @@ export class RoleController {
                         serverId: dbResult[0].server_id
                     });
 
-                    role._session = session;
+                    role.session = session;
                     await role.create(name);
                     await role.notify();
                     await role.save(true, true);
@@ -72,7 +72,7 @@ export class RoleController {
                 }
             }
 
-            role._session = session;
+            role.session = session;
             if (role.state === ERoleState.forbid) {
                 role.sendErrorMsg(ERROR_CODE.COMMON.ROLE_FORBID);
                 return;
@@ -110,15 +110,12 @@ export class RoleController {
             // await role.activityModel.tick();
             // role.taskModel.buildTaskIdx();
 
-            // start of send packet
-            // TODO
-            // end of send packet
-
-            // put it to the end
-            // role.sendProtocol(S2C.SC_ROLE_ONLINE.create({result: 1});
+            // send client packet
+            role.sendFull();
+            role.session.sendProtocol(MSG_ID_SESSION_INIT_COMPLETE);
 
             let now = gameNow();
-            role._session.timeLastAlive = now;
+            role.session.timeLastAlive = now;
             role.lastLoginTime = now;
             role.save().catch(e => Log.uError(role.uid, e));
         });

@@ -1,9 +1,10 @@
 import {Log} from "./log";
 import {Role} from "../../app/game/modles/role";
 import {RedisMgr, RedisType} from "../redis/redis_mgr";
-import {GameWorld, WorldDataRedisKey} from "../../app/game/game_world";
+import {WorldDataRedisKey} from "../../app/game/game_world";
 import {EActionCheckType, EMysqlValueType} from "../../app/game/modles/defines";
 import {Global} from "./global";
+import {Container} from "typedi";
 
 /**
  * 类函数装饰器，计算函数执行是
@@ -43,7 +44,7 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
         let originalMethod = descriptor.value;
         descriptor.value = async (...args) => {
             if (eCheckType === EActionCheckType.noCheck) {
-                await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
+                await originalMethod.apply(Container.get(target.constructor.name), args);
             }
             else if (eCheckType === EActionCheckType.authedThenInvalid && args[0].isAuthorized) {
                 Log.sWarn('already authorized, duplicate packet, roleId=%d, socketUid=%d', args[0].role.uid, args[0].socket.uid);
@@ -72,7 +73,7 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
                     role.refreshDaily(true);
                     role.refreshWeekly();
 
-                    await originalMethod.apply(GameWorld.instance.getController(args[1].constructor.name), args);
+                    await originalMethod.apply(Container.get(target.constructor.name), args);
                     // async save
                     role.notify().catch((e) => Log.uError(role.uid, e));
                     role.save().catch((e) => Log.uError(role.uid, e));

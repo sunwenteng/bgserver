@@ -1,12 +1,16 @@
 // auto generated do not modify
 import {Container} from "typedi";
 import {Role} from "../modles/role";
+import {IController} from "../modles/defines";
+import {RoleController} from "../controllers/role_controller";
+import {TestController} from "../controllers/test_controller";
+import {Zombie} from "../../proto/zombie";
 
-function getControllerMeta(controllerClass, methodName) {
-    if (!Container.has(controllerClass)) {
-        Container.set(controllerClass, new controllerClass());
+function getControllerMeta(decoder, controller, action): IController {
+    if (!Container.has(controller.name)) {
+        Container.set(controller.name, new controller());
     }
-    return [Container.get(controllerClass), Container.get(controllerClass)[methodName]];
+    return {decoder: decoder, controller: Container.get(controller.name), action: Container.get(controller.name)[action]};
 }
 
 export function getMsgId(o: any) {
@@ -14,19 +18,13 @@ export function getMsgId(o: any) {
 }
 
 /**
- * import all related controllers need auto generated
- */
-import {RoleController} from "../controllers/role_controller";
-import {TestController} from "../controllers/test_controller";
-import {Zombie} from "../../proto/zombie";
-
-/**
  * client msg handlers need auto generated
  * [MsgDecodeClass, HandlerClass, HandlerMethod]
  */
-export const handlerMapping: { [msgId: number]: any[] } = {
-    1001: [Zombie.Session_Init, ...getControllerMeta(RoleController, 'requestXXX')],
-    1002: [Zombie.Session_Init, ...getControllerMeta(TestController, 'requestXXXXXX')],
+export const controllerMappings: { [msgId: number]: IController } = {
+    1: getControllerMeta(Zombie.Session_Init, RoleController, 'online'),
+    3: getControllerMeta(Zombie.Session_Init, RoleController, 'heartBeat'),
+    2: getControllerMeta(Zombie.Session_Init, TestController, 'hello'),
 };
 
 /**
@@ -43,10 +41,10 @@ const encodingMapping = {
  */
 export class Ack {
     static useItem(role: Role, msg: Zombie.Session_Service_Bind) {
-        role._session.sendProtocol(123, msg);
+        role.session.sendProtocol(123, msg);
     }
 
     static xxxx(role: Role, msg: Zombie.Session_Service_Bind) {
-        role._session.sendProtocol(124, msg);
+        role.session.sendProtocol(124, msg);
     }
 }

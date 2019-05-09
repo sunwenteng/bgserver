@@ -10,7 +10,12 @@ export const MAX_NAME_LENGTH = 18;
 
 export const GM_RES_RELOAD_FLAG = '.todo';
 
+export interface IHandler extends IController {
+    msg: any;
+}
+
 export interface IController {
+    decoder: any;
     controller: Function | any;
     action: Function;
 }

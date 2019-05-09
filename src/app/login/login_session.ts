@@ -2,10 +2,11 @@ import {UserSession} from '../../lib/net/user_session';
 import {Log} from "../../lib/util/log";
 import {LoginWorld} from "./login_world";
 import * as LoginDB from "../../lib/mysql/login_db";
-import {realNow} from "../../lib/util/time";
 import {EServerState} from "../../lib/mysql/login_db";
+import {realNow} from "../../lib/util/time";
 import {S2C} from "../proto/s2c";
 import {C2S} from "../proto/c2s";
+import {IHandler} from "../game/modles/defines";
 
 const MAX_PACKET_COUNT = 10000;
 
@@ -17,7 +18,7 @@ export class LoginSession extends UserSession {
     device: string = '';
 
     public async update() {
-        let packet,
+        let packet : IHandler,
             counter = 0,
             cur = this.packets.head,
             t;
@@ -32,18 +33,18 @@ export class LoginSession extends UserSession {
             this.packets.deleteNode(t);
             cur = cur.next;
 
-            Log.sInfo('socketUid=%d, name=%s, data=%j', this.socket.uid, packet.kind, packet[packet.kind]);
+            Log.sInfo('socketUid=%d, name=%s, data=%j', this.socket.uid, packet.msg.constructor.name, packet.msg);
 
-            switch (packet.kind) {
+            switch (packet.msg.constructor.name) {
                 case 'LOGIN_CS_LOGIN' :
-                    await this.handleLogin(packet[packet.kind]);
+                    await this.handleLogin(packet.msg);
                     break;
                 case 'LOGIN_CS_CHOOSE_SERVER':
                     if (!this.passportId) {
                         Log.sInfo('no login, socketUid=', this.socket.uid);
                         break;
                     }
-                    await this.handleChooseServer(packet[packet.kind]);
+                    await this.handleChooseServer(packet.msg);
                     break;
                 case 'LOGIN_CS_GET_SERVER_LIST':
                     if (!this.passportId) {
@@ -53,16 +54,16 @@ export class LoginSession extends UserSession {
                     await this.handleGetServerList();
                     break;
                 case 'LOGIN_CS_GET_INFO':
-                    await this.handleGetInfo(packet[packet.kind]);
+                    await this.handleGetInfo(packet.msg);
                     break;
                 case 'LOGIN_CS_QUERY':
-                    await this.handleQuery(packet[packet.kind]);
+                    await this.handleQuery(packet.msg);
                     break;
                 case 'CS_ROLE_HEART_BEAT':
-                    await this.handleHeartBeat(packet[packet.kind]);
+                    await this.handleHeartBeat(packet.msg);
                     break;
                 default:
-                    Log.sError('controller not found, name=%s', packet.kind);
+                    Log.sError('controller not found, name=%s', packet.msg);
                     break;
             }
             // per loop do 5 packet

@@ -5,17 +5,12 @@ import {S2C} from "../../app/proto/s2c";
 import {Log} from "../util/log";
 import {realNow} from "../util/time";
 import * as ByteBuffer from "bytebuffer";
-import {
-    MSG_HEADER_LEN_BYTES,
-    MSG_HEADER_MSG_ID_BYTES,
-    MSG_HEADER_MSG_IDX_BYTES,
-    MSG_HEADER_TOTAL_BYTES
-} from "../../app/game/modles/defines";
-import {getMsgId, handlerMapping} from "../../app/game/schema_generated/msg";
+import {IHandler, MSG_HEADER_TOTAL_BYTES} from "../../app/game/modles/defines";
+import {getMsgId} from "../../app/game/schema_generated/msg";
 
 export abstract class UserSession extends events.EventEmitter {
     private _curMsgIdx: number = 0;
-    public packets: LinkedList<any>;
+    public packets: LinkedList<IHandler>;
     public socket: WebSocket | any;
     public timeLastAlive: number = realNow();
     public isAuthorized: boolean = false;
@@ -24,24 +19,6 @@ export abstract class UserSession extends events.EventEmitter {
     constructor() {
         super();
         this.packets = new LinkedList<any>();
-        this.on('message', (data) => {
-            try {
-                let buffer = new Buffer(data);
-                let len = buffer.readUInt32LE(0);
-                let msgId = buffer.readUInt16LE(MSG_HEADER_LEN_BYTES);
-                let msgIdx = buffer.readUInt16LE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
-                let handleInfo = handlerMapping[msgId];
-                if (!handleInfo) {
-                    Log.sError(`parse error, len=${len}, msgId=${msgId}, msgIdx=${msgIdx}`);
-                    return;
-                }
-                let msg = handleInfo[0].decode(buffer.slice(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES + MSG_HEADER_MSG_IDX_BYTES));
-                this.packets.append([msgId, msg]);
-            }
-            catch (e) {
-                Log.sError(e);
-            }
-        });
     }
 
     public async abstract update(): Promise<void>;
