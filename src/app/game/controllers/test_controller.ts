@@ -5,12 +5,12 @@ import * as uuid from 'uuid';
 import {EActionCheckType} from "../modles/defines";
 import {Inject} from "typedi";
 import {ResourceService} from "../services/resource_service";
-import {Item} from "../schema_generated/item_model";
 import {C2S} from "../../proto/c2s";
 import {S2C} from "../../proto/s2c";
 import {Post} from "routing-controllers/decorator/Post";
 import {GameSession} from "../game_session";
 import * as ByteBuffer from "bytebuffer";
+import {Item} from "../schema_generated/role_rpc";
 
 @JsonController('/test')
 export class TestController {

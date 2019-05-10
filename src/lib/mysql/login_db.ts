@@ -335,7 +335,7 @@ export async function start(config: MysqlConfig): Promise<void> {
         "id			INT		UNSIGNED	NOT NULL," +
         "idx		INT		UNSIGNED	NOT NULL," +
         "role_id	INT		UNSIGNED	NOT NULL," +
-        "PRIMARY KEY(id, idx)" +
+        "PRIMARY KEY(id, idx, role_id)" +
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8;",
 
         "invite_info": "CREATE TABLE IF NOT EXISTS invite_info(" +

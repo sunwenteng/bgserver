@@ -47,9 +47,9 @@ export class GameSession extends UserSession {
     }
 
     @execTime(false)
-    private async doAction(controller: Function, action: Function, session: GameSession, packet: any) {
+    private async doAction(controller: Function, action: Function, session: GameSession, packet: any, responseHandler: (role: Role, msg ?: any) => void) {
         Log.uInfo(this.role ? this.role.uid : 0, 'serverId=%d, socketUid=%d, roleId=%d, name=%s, data=%j', this.role ? this.role.serverId : 0, this.socket.uid, this.role ? this.role.uid : 0, packet.constructor.name, packet);
-        await action.apply(controller, [session, packet]);
+        await action.apply(controller, [session, packet, responseHandler]);
     }
 
     public async update() {
@@ -69,7 +69,7 @@ export class GameSession extends UserSession {
             this.packets.deleteNode(t);
             cur = cur.next;
 
-            await this.doAction(packet.controller, packet.action, this, packet.msg).catch((e) => {
+            await this.doAction(packet.controller, packet.action, this, packet.msg, packet.response).catch((e) => {
                 Log.sError(e);
             });
 

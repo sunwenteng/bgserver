@@ -18,6 +18,7 @@ export interface IController {
     decoder: any;
     controller: Function | any;
     action: Function;
+    response: (role, msg) => void;
 }
 
 export enum ETimeType {

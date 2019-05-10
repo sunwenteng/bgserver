@@ -6,7 +6,7 @@ import {Log} from "../util/log";
 import {realNow} from "../util/time";
 import * as ByteBuffer from "bytebuffer";
 import {IHandler, MSG_HEADER_TOTAL_BYTES} from "../../app/game/modles/defines";
-import {getMsgId} from "../../app/game/schema_generated/msg";
+import {getMsgId} from "../../app/game/schema_generated";
 
 export abstract class UserSession extends events.EventEmitter {
     private _curMsgIdx: number = 0;

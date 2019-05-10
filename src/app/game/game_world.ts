@@ -27,8 +27,8 @@ import {Container} from "typedi";
 import {BGObject} from "../../lib/util/bg_util";
 import {S2C} from "../proto/s2c";
 import {RoleController} from "./controllers/role_controller";
-import {controllerMappings} from "./schema_generated/msg";
 import {Zombie} from "../proto/zombie";
+import {registerController} from "./schema_generated";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',
@@ -265,24 +265,27 @@ export class GameWorld extends events.EventEmitter {
     }
 
     private registerController(): void {
-        this._allControllers = {...controllerMappings};
+        registerController(this._allControllers);
 
         this._allControllers[MSG_ID_SESSION_INIT] = {
             decoder: Zombie.Session_Init,
             controller: Container.get(RoleController.name),
-            action: Container.get(RoleController.name)['online']
+            action: Container.get(RoleController.name)['online'],
+            response: undefined
         };
 
         this._allControllers[MSG_ID_ACK_MSG] = {
             decoder: Zombie.Ack_Msg,
             controller: Container.get(RoleController.name),
-            action: Container.get(RoleController.name)['ackMsg']
+            action: Container.get(RoleController.name)['ackMsg'],
+            response: undefined
         };
 
         this._allControllers[MSG_ID_HEART_BEAT] = {
             decoder: undefined,
             controller: Container.get(RoleController.name),
-            action: Container.get(RoleController.name)['heartBeat']
+            action: Container.get(RoleController.name)['heartBeat'],
+            response: undefined
         };
     }
 
