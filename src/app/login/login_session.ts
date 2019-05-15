@@ -6,7 +6,7 @@ import {EServerState} from "../../lib/mysql/login_db";
 import {realNow} from "../../lib/util/time";
 import {S2C} from "../proto/s2c";
 import {C2S} from "../proto/c2s";
-import {IHandler} from "../game/modles/defines";
+import {IRpc} from "../game/modles/defines";
 
 const MAX_PACKET_COUNT = 10000;
 
@@ -18,19 +18,19 @@ export class LoginSession extends UserSession {
     device: string = '';
 
     public async update() {
-        let packet : IHandler,
+        let packet: IRpc,
             counter = 0,
-            cur = this.packets.head,
+            cur = this.rpcList.head,
             t;
         while (cur) {
-            if (this.packets.length > MAX_PACKET_COUNT) {
-                Log.sError('packet array length too long, force close socket, uid=%d, ip=%s, length=%d', this.socket.uid, this.socket.ip, this.packets.length);
+            if (this.rpcList.length > MAX_PACKET_COUNT) {
+                Log.sError('packet array length too long, force close socket, uid=%d, ip=%s, length=%d', this.socket.uid, this.socket.ip, this.rpcList.length);
                 this.closeSocket();
             }
 
             packet = cur.element;
             t = cur;
-            this.packets.deleteNode(t);
+            this.rpcList.deleteNode(t);
             cur = cur.next;
 
             Log.sInfo('socketUid=%d, name=%s, data=%j', this.socket.uid, packet.msg.constructor.name, packet.msg);
@@ -230,7 +230,7 @@ export class LoginSession extends UserSession {
 
         pck.serverId = lastLoginServer;
         pck.gmAuth = this.gmAuth;
-        this.sendProto(pck);
+        // this.sendProto(pck);
     }
 
     public async handleGetServerList() {
@@ -265,7 +265,7 @@ export class LoginSession extends UserSession {
                 pck.servers.push(serverPck);
             }
         }
-        this.sendProto(pck);
+        // this.sendProto(pck);
     }
 
     public handleGetInfo(packet: C2S.LOGIN_CS_GET_INFO) {
@@ -292,7 +292,7 @@ export class LoginSession extends UserSession {
             pck.updateAddress = '';
         }
 
-        this.sendProto(pck);
+        // this.sendProto(pck);
     }
 
     public async handleChooseServer(packet: C2S.LOGIN_CS_CHOOSE_SERVER) {
@@ -328,7 +328,7 @@ export class LoginSession extends UserSession {
             pck.serverId = server.server_id;
             pck.serverName = server.server_name;
 
-            this.sendProto(pck);
+            // this.sendProto(pck);
         }
     }
 
@@ -348,11 +348,11 @@ export class LoginSession extends UserSession {
             replyMsg.success = true;
         }
         while (0);
-        this.sendProto(replyMsg);
+        // this.sendProto(replyMsg);
     }
 
     public handleHeartBeat(packet: C2S.CS_ROLE_HEART_BEAT) {
         this.timeLastAlive = realNow();
-        this.sendProto(S2C.SC_ROLE_HEART_BEAT.create());
+        // this.sendProto(S2C.SC_ROLE_HEART_BEAT.create());
     }
 }

@@ -32,7 +32,7 @@ export class WebSocket {
     private _state: SocketStatus;
     private readonly _ip: string;
 
-    constructor(ip: string) {
+    constructor(ip?: string) {
         this._ip = ip;
     }
 
@@ -43,6 +43,11 @@ export class WebSocket {
         this._session.socket = this;
         this._session.addSessionToWorker();
         this._state = SocketStatus.VALID;
+        this._webSocket.on('open', () => {
+            this._state = SocketStatus.VALID;
+            Log.sInfo('webSocket opened');
+        });
+
         this._webSocket.on('message', (data: ArrayBuffer) => {
             if (this.isSocketValid()) {
                 this._session.emit('message', data);

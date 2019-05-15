@@ -43,8 +43,13 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
     return (target: Object, methodName: string, descriptor: TypedPropertyDescriptor<Function>) => {
         let originalMethod = descriptor.value;
         descriptor.value = async (...args) => {
+            if (args.length !== 4) {
+                throw new Error('BGAction param error ' + args.length);
+            }
+            let returnValue = null;
             if (eCheckType === EActionCheckType.noCheck) {
-                await originalMethod.apply(Container.get(target.constructor.name), args);
+                returnValue = await originalMethod.apply(Container.get(target.constructor.name), args);
+                args[0].sendProtocol(args[2], returnValue, args[3]);
             }
             else if (eCheckType === EActionCheckType.authedThenInvalid && args[0].isAuthorized) {
                 Log.sWarn('already authorized, duplicate packet, roleId=%d, socketUid=%d', args[0].role.uid, args[0].socket.uid);
@@ -73,7 +78,7 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
                     role.refreshDaily(true);
                     role.refreshWeekly();
 
-                    await originalMethod.apply(Container.get(target.constructor.name), args);
+                    returnValue = await originalMethod.apply(Container.get(target.constructor.name), args);
                     // async save
                     role.notify().catch((e) => Log.uError(role.uid, e));
                     role.save().catch((e) => Log.uError(role.uid, e));
@@ -104,6 +109,18 @@ export function BGMysql(type: EMysqlValueType, len?: number) {
                 break;
             case EMysqlValueType.uint64:
                 dbString = `BIGINT(20) UNSIGNED NOT NULL DEFAULT '0'`;
+                break;
+            case EMysqlValueType.int8:
+                dbString = `TINYINT NOT NULL DEFAULT '0'`;
+                break;
+            case EMysqlValueType.int16:
+                dbString = `SMALLINT NOT NULL DEFAULT '0'`;
+                break;
+            case EMysqlValueType.int32:
+                dbString = `INT NOT NULL DEFAULT '0'`;
+                break;
+            case EMysqlValueType.int64:
+                dbString = `BIGINT(20) NOT NULL DEFAULT '0'`;
                 break;
             case EMysqlValueType.string:
                 dbString = `VARCHAR(${len ? len : 64}) CHARACTER SET utf8 NOT NULL DEFAULT ''`;

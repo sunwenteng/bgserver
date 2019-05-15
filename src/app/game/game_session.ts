@@ -6,13 +6,10 @@ import {Role, roleRedisPrefix} from "./modles/role";
 import {execTime} from "../../lib/util/descriptor";
 import {IntervalTimer, realNow} from "../../lib/util/time";
 import * as LoginDB from '../../lib/mysql/login_db';
-import {
-    IController,
-    IHandler,
-    MSG_HEADER_LEN_BYTES,
-    MSG_HEADER_MSG_ID_BYTES,
-    MSG_HEADER_MSG_IDX_BYTES
-} from "./modles/defines";
+import {IRpc, MSG_ID_SESSION_INIT, MSG_ID_SESSION_INIT_COMPLETE,} from "./modles/defines";
+import {allRpc} from "./schema_generated";
+import {Zombie} from "../proto/zombie";
+import {RoleController} from "./controllers/role_controller";
 
 const MAX_PACKET_COUNT = 10000;
 
@@ -25,51 +22,43 @@ export class GameSession extends UserSession {
 
     constructor() {
         super();
+        let data = allRpc();
+        this._rpcMetaMap = data.rpc;
+        this._msgIdx = data.idx;
 
-        this.on('message', (data) => {
-            try {
-                const buffer = new Buffer(data);
-                const len = buffer.readUInt32BE(0);
-                const msgId = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES);
-                const msgIdx = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
-                const controller: IController = GameWorld.instance.getController(msgId);
-                if (!controller) {
-                    Log.sError(`handleInfo parse error, len=${len}, msgId=${msgId}, msgIdx=${msgIdx}`);
-                    return;
-                }
-                const msg = controller.decoder.decode(buffer.slice(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES + MSG_HEADER_MSG_IDX_BYTES));
-                this.packets.append({...controller, msg: msg});
-            }
-            catch (e) {
-                Log.sError(e);
-            }
-        });
+        this._rpcMetaMap[MSG_ID_SESSION_INIT] = {
+            reqMsgId: MSG_ID_SESSION_INIT,
+            reqEncoder: Zombie.Session_Init,
+            resMsgId: MSG_ID_SESSION_INIT_COMPLETE,
+            controller: 'RoleController',
+            action: 'online'
+        };
     }
 
     @execTime(false)
-    private async doAction(controller: Function, action: Function, session: GameSession, packet: any, responseHandler: (role: Role, msg ?: any) => void) {
+    private async doAction(controller: Function, action: Function, session: GameSession, packet: any, resMsgId: number, resMsgEncoder?: Function) {
         Log.uInfo(this.role ? this.role.uid : 0, 'serverId=%d, socketUid=%d, roleId=%d, name=%s, data=%j', this.role ? this.role.serverId : 0, this.socket.uid, this.role ? this.role.uid : 0, packet.constructor.name, packet);
-        await action.apply(controller, [session, packet, responseHandler]);
+        await action.apply(controller, [session, packet, resMsgId, resMsgEncoder]);
     }
 
     public async update() {
-        let packet: IHandler,
+        let rpc: IRpc = null,
             counter = 0,
-            cur = this.packets.head,
+            cur = this.rpcList.head,
             t,
             now = realNow();
         while (cur) {
-            if (this.packets.length > MAX_PACKET_COUNT) {
-                Log.sError('packet array length too long, force close socket, uid=%d, ip=%s, length=%d', this.socket.uid, this.socket.ip, this.packets.length);
+            if (this.rpcList.length > MAX_PACKET_COUNT) {
+                Log.sError('packet array length too long, force close socket, uid=%d, ip=%s, length=%d', this.socket.uid, this.socket.ip, this.rpcList.length);
                 this.closeSocket();
             }
 
-            packet = cur.element;
+            rpc = cur.element;
             t = cur;
-            this.packets.deleteNode(t);
+            this.rpcList.deleteNode(t);
             cur = cur.next;
 
-            await this.doAction(packet.controller, packet.action, this, packet.msg, packet.response).catch((e) => {
+            await this.doAction(rpc.controller, rpc.action, this, rpc.msg, rpc.resMsgId, rpc.resEncoder).catch((e) => {
                 Log.sError(e);
             });
 

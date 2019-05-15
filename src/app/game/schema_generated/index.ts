@@ -1,12 +1,19 @@
 import * as RoleRpc from "./role_rpc";
+import {IRpcMeta} from "../modles/defines";
 
-let encodingMappings = {};
+let rpcMetas: { [msgId: number]: IRpcMeta } = {};
+let msgIdx: { [reqEncoderName: string]: number } = {};
 
-export function getMsgId(o: any) {
-    return encodingMappings[o.constructor.name];
-}
+export let allRpc = () => {
+    if (Object.keys(rpcMetas).length === 0) {
+        rpcMetas = {...RoleRpc.rpcMetas};
+        for (let msgId in rpcMetas) {
+            let rpc = rpcMetas[msgId];
+            if (rpc.reqEncoder) {
+                msgIdx[rpc.reqEncoder.name] = parseInt(msgId);
+            }
+        }
+    }
 
-export function registerController(controllers) {
-    Object.entries({...RoleRpc.controllerMappings}).forEach(value => controllers[value[0]] = value[1]);
-    Object.entries({...RoleRpc.encodingMappings}).forEach(value => encodingMappings[value[1].toString()] = value[0]);
-}
+    return {rpc: rpcMetas, idx: msgIdx};
+};

@@ -10,15 +10,17 @@ export const MAX_NAME_LENGTH = 18;
 
 export const GM_RES_RELOAD_FLAG = '.todo';
 
-export interface IHandler extends IController {
+export interface IRpc extends IRpcMeta {
     msg: any;
 }
 
-export interface IController {
-    decoder: any;
-    controller: Function | any;
-    action: Function;
-    response: (role, msg) => void;
+export interface IRpcMeta {
+    reqMsgId: number;
+    reqEncoder?: Function | any;
+    resMsgId?: number;
+    resEncoder?: Function | any;
+    controller?: Function | any;
+    action?: Function | any;
 }
 
 export enum ETimeType {
@@ -59,6 +61,10 @@ export enum EMysqlValueType {
     uint16 = 1,
     uint32 = 2,
     uint64 = 3,
+    int8 = 4,
+    int16 = 5,
+    int32 = 6,
+    int64 = 7,
     string = 10,    // under 512
     blob = 11,      // <= 64k
     longblob = 11   // unlimited but not efficient

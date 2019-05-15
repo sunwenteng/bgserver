@@ -4,27 +4,48 @@ const exec = require('child_process').exec;
 const fs = require('fs');
 const path = require("path");
 
-
 function execP(cmd) {
     return new Promise((resolve, reject) => {
         exec(cmd, resolve).on('error', reject);
     });
 }
 
+function splitByCapital(str) {
+    let ret = [], start = 0;
+    for (let i = 0; i < str.length; i++) {
+        if (str[i] >= 'A' && str[i] <= 'Z' && i > start) {
+            ret.push(str.substring(start, i).toLowerCase());
+            start = i;
+        }
+    }
+    ret.push(str.substring(start).toLowerCase());
+    return ret;
+}
+
 gulp.task('proto2js', async () => {
-    const protoDir = path.resolve('./src/app/proto');
-    const files = fs.readdirSync(protoDir);
+    const protoDirs = [/*path.resolve('./src/app/proto'), */path.resolve('./src/app/game/schema')];
     let protoFiles = [], jsFiles = [], tsFiles = [];
-    for (let file of files) {
-        if (file.indexOf('.proto') !== -1) {
-            protoFiles.push(path.join(protoDir, file));
-            jsFiles.push(path.join(protoDir, file.split('.')[0] + '.js'));
-            tsFiles.push(path.join(protoDir, file.split('.')[0] + '.d.ts'));
+    for (let protoDir of protoDirs) {
+        const files = fs.readdirSync(protoDir);
+        for (let file of files) {
+            if (file.search(/^.*?\.(proto)$/) !== -1) {
+                protoFiles.push(path.join(protoDir, file));
+                let nameArray = file.split('.');
+                jsFiles.push(path.join(protoDir, nameArray[0] + '.proto.js'));
+                tsFiles.push(path.join(protoDir, nameArray[0] + '.proto.d.ts'));
+                // auto generate controller file if needed
+                // let controllerFileName = path.resolve(protoDir, '../controllers/' + splitByCapital(nameArray[0]).join('_') + '.ts');
+                // if (!fs.existsSync(controllerFileName)) {
+                //     fs.writeFileSync(controllerFileName, `export class ${nameArray[0]} {}`);
+                //     console.log(`controller ${nameArray[0]} not exist, then auto create`);
+                // }
+            }
         }
     }
 
     for (let i = 0; i < protoFiles.length; i++) {
         const protoFile = protoFiles[i];
+        console.log(protoFile);
         await execP(`npx pbjs -t static-module -w commonjs -o ${jsFiles[i]} ${protoFile} && npx pbts --no-comments -o ${tsFiles[i]} ${jsFiles[i]}`)
     }
 });

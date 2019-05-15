@@ -9,6 +9,8 @@ import {RedisMgr, RedisType} from "../../lib/redis/redis_mgr";
 import {ConfigMgr} from "../../config/data/config_struct";
 import {createPidFile, Loop, registerProcessListener} from "../../lib/util/game_util";
 import {Global} from "../../lib/util/global";
+import {RpcSession} from "../../lib/net/rpc_session";
+import {allRpc} from "./schema_generated";
 
 async function main() {
     commander.version('0.0.1')
@@ -21,6 +23,7 @@ async function main() {
     Log.init(Global.config.log.dir, Global.config.log.level);
 
     registerProcessListener(async () => {
+        gameSession.close();
         await server.stop();
         await GameWorld.instance.stop();
         await mainLoop.stop();
@@ -46,12 +49,16 @@ async function main() {
 
     let mainLoop = new Loop(GameWorld.instance.update, GameWorld.instance, () => !Global.isAppValid, 100);
     mainLoop.run();
+
+    // for test
+    let gameSession = new RpcSession('172.16.1.83', 5555, 'game', allRpc());
+    await gameSession.init();
 }
 
 main().then(async () => {
     createPidFile();
     Log.sInfo('app start success');
 }).catch((reason => {
-    Log.sError(reason.stack + '\napp start fail');
+    Log.sError(reason ? reason.stack : '' + '\napp start fail');
     process.exit(1);
 }));

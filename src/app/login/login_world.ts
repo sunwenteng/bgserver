@@ -8,11 +8,12 @@ import {RedisMgr, RedisType} from "../../lib/redis/redis_mgr";
 import {SECOND} from "../game/modles/defines";
 import {WorldDataRedisKey} from "../game/game_world";
 import * as time from "../../lib/util/time";
+import {LoginSession} from "./login_session";
 
 export class LoginWorld {
     public _isUpdating: boolean;
     public static instance: LoginWorld = new LoginWorld();
-    private readonly _sessionList: LinkedList<UserSession> = new LinkedList<UserSession>();
+    private readonly _sessionList: LinkedList<LoginSession> = new LinkedList();
 
     updateInfo: IntervalTimer = new IntervalTimer(20);
 
@@ -42,7 +43,6 @@ export class LoginWorld {
             else {
                 t = cur;
                 this.delSession(t);
-                await cur.element.offline();
                 cur = cur.next;
             }
         }
@@ -179,12 +179,12 @@ export class LoginWorld {
         }));
     }
 
-    public addSession(session: UserSession): void {
+    public addSession(session: LoginSession): void {
         Log.sInfo('add session to world, socketUid=' + session.socket.uid);
         this._sessionList.append(session);
     }
 
-    public delSession(node: ListNode<UserSession>): void {
+    public delSession(node: ListNode<LoginSession>): void {
         Log.sInfo('del session of world, socketUid=' + node.element.socket.uid);
         this._sessionList.deleteNode(node);
     }

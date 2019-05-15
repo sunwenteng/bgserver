@@ -1,46 +1,28 @@
 // auto generated do not modify
-import {Container} from "typedi";
-import {Role} from "../modles/role";
-import {EMysqlValueType, IController} from "../modles/defines";
-import {RoleController} from "../controllers/role_controller";
-import {TestController} from "../controllers/test_controller";
+import {EMysqlValueType, IRpcMeta} from "../modles/defines";
 import {Zombie} from "../../proto/zombie";
 import {BGField, BGMap, BGObject, EBGValueType} from "../../../lib/util/bg_util";
 import {BGMysql} from "../../../lib/util/descriptor";
 import {GM_TYPE} from "../../gm/gm_struct";
+import {getBean} from "../../../lib/util/context";
+import {RoleController} from "../controllers/role_controller";
 
-function getControllerMeta(decoder, controller, action, response): IController {
-    if (!Container.has(controller.name)) {
-        Container.set(controller.name, new controller());
+/**
+ * all rpc
+ */
+export const rpcMetas: { [reqMsgId: number]: IRpcMeta } = {
+    1: {
+        reqMsgId: 1,
+        reqEncoder: Zombie.Session_Init,
+        resMsgId: 1,
+        resEncoder: Zombie.Session_Init,
+        controller: getBean(RoleController),
+        action: getBean(RoleController)['online'],
+    },
+    2: {
+        reqMsgId: 2,
+        resMsgId: 2,
     }
-    return {
-        decoder: decoder,
-        controller: Container.get(controller.name),
-        action: Container.get(controller.name)[action],
-        response: response
-    };
-}
-
-/**
- * client msg handlers need auto generated
- */
-export const controllerMappings: { [msgId: number]: IController } = {
-    1: getControllerMeta(Zombie.Session_Init, RoleController, 'online', (role: Role, msg: Zombie.Session_Service_Bind) => {
-        role.session.sendProtocol(123, msg);
-    }),
-    3: getControllerMeta(Zombie.Session_Init, RoleController, 'heartBeat', (role: Role, msg: Zombie.Session_Service_Bind) => {
-        role.session.sendProtocol(123, msg);
-    }),
-    2: getControllerMeta(Zombie.Session_Init, TestController, 'hello', (role: Role, msg: Zombie.Session_Service_Bind) => {
-        role.session.sendProtocol(123, msg);
-    }),
-};
-
-/**
- * msg decodes need auto generated
- */
-export const encodingMappings = {
-    123: 'CS_HAHAHA'
 };
 
 /****************************************************************************************************************/

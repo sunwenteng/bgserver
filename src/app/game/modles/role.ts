@@ -14,7 +14,6 @@ import {BGField, EBGValueType} from "../../../lib/util/bg_util";
 import {S2C} from "../../proto/s2c";
 import * as ByteBuffer from "bytebuffer";
 import {RoleModel} from "../schema_generated/role_rpc";
-import {getMsgId} from "../schema_generated";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';
@@ -35,8 +34,6 @@ interface IConsumeInfo {
 
 export class Role extends RoleModel {
     session: GameSession;
-    _endProtocol: any = null;
-    _endProtocolId: number = null;
 
     // 一些临时数据，不做任何存储，只适用于在线用户的一些临时数据
     serverId: number = 0;
@@ -155,30 +152,6 @@ export class Role extends RoleModel {
         return this.uid % WorldDB.conn.config.tableSplitCount;
     }
 
-    public sendProtocol(msg: any, bIsEndProtocol: boolean = false) {
-        let msgId = getMsgId(msg.constructor.name);
-        if (!msgId) {
-            throw new Error(`message ${msg.constructor.name} not found in decodeMapping`);
-        }
-        if (bIsEndProtocol) {
-            this._endProtocol = msg;
-            this._endProtocolId = msgId;
-            return;
-        }
-
-        if (this.session) {
-            this.session.sendProtocol(msgId, msg);
-        }
-    }
-
-    public sendEndProtocol() {
-        if (this._endProtocol) {
-            this.sendProtocol(this._endProtocolId, this._endProtocol);
-            this._endProtocol = null;
-            this._endProtocolId = null;
-        }
-    }
-
     public sendErrorMsg(code: number, ...args: any[]) {
         if (this.session) {
             let msg = util.format.apply(util, args);
@@ -206,7 +179,6 @@ export class Role extends RoleModel {
     }
 
     public async notify() {
-        this.sendEndProtocol();
         // await RankController.instance.notify();
     }
 
@@ -277,6 +249,16 @@ export class Role extends RoleModel {
             // todo
             this.timeWeekly = now;
         }
+    }
+
+    sendProtocol(msg: any) {
+        let msgId = this.session.getMsgId(msg);
+        if (!msgId) {
+            throw new Error(`${msg.constructor.name} msgId not found`);
+        }
+
+        let rpcMeta = this.session.getRpcMeta(msgId);
+        this.session.sendProtocol(msgId, rpcMeta.reqEncoder, msg);
     }
 
     doPay(platformId: number, goodsId: number): boolean {

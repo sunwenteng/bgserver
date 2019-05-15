@@ -1,4 +1,3 @@
-import {UserSession} from '../../lib/net/user_session';
 import {LinkedList, ListNode} from '../../lib/util/linked_list';
 import * as GameUtil from '../../lib/util/game_util';
 import {createResVersionFile, getResVersion, rmAll} from '../../lib/util/game_util';
@@ -11,24 +10,12 @@ import * as time from '../../lib/util/time';
 import {IntervalTimer, realNow} from '../../lib/util/time';
 import * as LoginDB from "../../lib/mysql/login_db";
 import * as WorldDB from "../../lib/mysql/world_db";
-import {
-    BMap,
-    GlobalKeyType,
-    GM_RES_RELOAD_FLAG,
-    IController,
-    MSG_ID_ACK_MSG,
-    MSG_ID_HEART_BEAT,
-    MSG_ID_SESSION_INIT
-} from "./modles/defines";
+import {BMap, GlobalKeyType, GM_RES_RELOAD_FLAG} from "./modles/defines";
 import {GameSession} from "./game_session";
 import {ConfigMgr} from "../../config/data/config_struct";
 import {Global} from "../../lib/util/global";
-import {Container} from "typedi";
 import {BGObject} from "../../lib/util/bg_util";
 import {S2C} from "../proto/s2c";
-import {RoleController} from "./controllers/role_controller";
-import {Zombie} from "../proto/zombie";
-import {registerController} from "./schema_generated";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',
@@ -138,9 +125,8 @@ export class GameWorld extends events.EventEmitter {
     public static instance = new GameWorld();
     public info: InstanceServerInfo = null;
 
-    private readonly _sessionList: LinkedList<UserSession> = new LinkedList<UserSession>();
+    private readonly _sessionList: LinkedList<GameSession> = new LinkedList();
     private readonly _authedSessionMap: BMap<GameSession> = {}; // 玩家上线通过后加入进来
-    private _allControllers: BMap<IController> = {};
     private readonly _timer: { [mutex: string]: time.RaceTimer } = {};
     private _updateServerRedis: IntervalTimer = new IntervalTimer(3);
     private _updateServers: IntervalTimer = new IntervalTimer(5);
@@ -264,33 +250,7 @@ export class GameWorld extends events.EventEmitter {
         }
     }
 
-    private registerController(): void {
-        registerController(this._allControllers);
-
-        this._allControllers[MSG_ID_SESSION_INIT] = {
-            decoder: Zombie.Session_Init,
-            controller: Container.get(RoleController.name),
-            action: Container.get(RoleController.name)['online'],
-            response: undefined
-        };
-
-        this._allControllers[MSG_ID_ACK_MSG] = {
-            decoder: Zombie.Ack_Msg,
-            controller: Container.get(RoleController.name),
-            action: Container.get(RoleController.name)['ackMsg'],
-            response: undefined
-        };
-
-        this._allControllers[MSG_ID_HEART_BEAT] = {
-            decoder: undefined,
-            controller: Container.get(RoleController.name),
-            action: Container.get(RoleController.name)['heartBeat'],
-            response: undefined
-        };
-    }
-
     public async start() {
-        this.registerController();
         await this.initServerMap();
         await this.registerServer();
         await this.initControllers();
@@ -478,12 +438,12 @@ export class GameWorld extends events.EventEmitter {
         }
     }
 
-    public addSession(session: UserSession): void {
+    public addSession(session: GameSession): void {
         Log.sInfo('add session to world, socketUid=' + session.socket.uid);
         this._sessionList.append(session);
     }
 
-    public delSession(node: ListNode<UserSession>): void {
+    public delSession(node: ListNode<GameSession>): void {
         Log.sInfo('del session of world, socketUid=' + node.element.socket.uid);
         this._sessionList.deleteNode(node);
     }
@@ -560,10 +520,6 @@ export class GameWorld extends events.EventEmitter {
                 }, 10);
             }
         }));
-    }
-
-    public getController(cmd) {
-        return this._allControllers[cmd];
     }
 
     private async loadGlobalData<T extends BGObject>(serverId: number, globalKey: GlobalKeyType, globalDataType: new () => T): Promise<T> {
