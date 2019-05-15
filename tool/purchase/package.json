@@ -27,7 +27,7 @@
   "preferGlobal": true,
   "bin": {},
   "engines": {
-    "node": ">=8.11.1 <8.11.2"
+    "node": ">=12.2.0"
   },
   "dependencies": {
     "mysql": "^2.15.0"
@@ -38,7 +38,8 @@
   "maintainers": [
     {
       "username": "sunwenteng",
-      "email": "elvessun@gmail.com"
+      "email": "elvessun@gmail.com",
+      "name": "bingo"
     }
   ],
   "directories": {},
