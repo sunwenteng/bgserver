@@ -12,7 +12,7 @@ export class StringChecker {
     root: Node = new Node();
 
     addPattern(pattern: string) {
-        let buffer = new Buffer(pattern);
+        let buffer = Buffer.from(typeof pattern === 'number' ? (pattern + '') : pattern);
         let depth = 0;
         let node = this.root;
         for (let i = 0; i < buffer.length; i++) {

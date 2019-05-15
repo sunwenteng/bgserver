@@ -35,7 +35,7 @@ export abstract class UserSession extends events.EventEmitter {
     }
 
     public decode(data: Buffer): IRpc {
-        const buffer = new Buffer(data);
+        const buffer = Buffer.from(data);
         const len = buffer.readUInt32BE(0);
         const msgId = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES);
         const msgIdx = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
