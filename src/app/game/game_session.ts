@@ -10,6 +10,7 @@ import {IRpc, MSG_ID_SESSION_INIT, MSG_ID_SESSION_INIT_COMPLETE,} from "./modles
 import {allRpc} from "./schema_generated";
 import {Zombie} from "../proto/zombie";
 import {RoleController} from "./controllers/role_controller";
+import {Container} from "typedi";
 
 const MAX_PACKET_COUNT = 10000;
 
@@ -30,8 +31,8 @@ export class GameSession extends UserSession {
             reqMsgId: MSG_ID_SESSION_INIT,
             reqEncoder: Zombie.Session_Init,
             resMsgId: MSG_ID_SESSION_INIT_COMPLETE,
-            controller: 'RoleController',
-            action: 'online'
+            controller: Container.get(RoleController.name),
+            action: Container.get(RoleController.name)['online']
         };
     }
 

@@ -4,6 +4,7 @@ import {SECOND} from "../../app/game/modles/defines";
 import * as WebSocket from 'ws';
 import {UserSession} from "./user_session";
 import Timer = NodeJS.Timer;
+import {Zombie} from "../../app/proto/zombie";
 
 interface Rpc {
     msgId: number;
@@ -44,7 +45,12 @@ export class RpcSession extends UserSession {
             this._socket.on('open', () => {
                 this._state = ESessionState.CONNECTED;
                 Log.sInfo(`rpc session ${this._name}, ${this._host}:${this._port} connected!`);
-                // TODO send init packet process
+                let pck = Zombie.Session_Init.create();
+                this.rpc(pck, this, (err, msg) => {
+                    if (err) {
+                        Log.sError(err);
+                    }
+                });
                 resolve();
             });
 
@@ -82,6 +88,7 @@ export class RpcSession extends UserSession {
                 let now = Date.now();
                 while (cur) {
                     if ((now - cur.element.ctime) > 5 * SECOND) {
+                        this._rpcList.deleteNode(cur);
                         await cur.element.cb.apply(cur.element.self, [new Error(`rpc session ${this._name} timeout`), null]);
                     }
                     cur = cur.next;
@@ -97,7 +104,14 @@ export class RpcSession extends UserSession {
         this._socket.close();
     }
 
-    rpc(msgId: number, msg: any, self: any, cb: (err, msg) => void) {
+    rpc(msg: any, self: any, cb: (err, msg) => void) {
+        let msgId = this._msgIdx[msg.constructor.name];
+        if (!msgId) {
+            throw new Error(`rpc session ${this._name} ${msg.constructor.name} not found`);
+        }
         this._rpcList.append({msgId: msgId, msg: msg, cb: cb, self: self, ctime: Date.now()});
+
+        let rpc = this._rpcMetaMap[msgId];
+        this._socket.send(this.encode(msgId, rpc.reqEncoder, msg));
     }
 }

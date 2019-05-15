@@ -1,7 +1,6 @@
 import {WebSocket} from "./ws/web_socket";
 import {LinkedList} from "../util/linked_list";
 import * as events from "events";
-import {S2C} from "../../app/proto/s2c";
 import {Log} from "../util/log";
 import {realNow} from "../util/time";
 import * as ByteBuffer from "bytebuffer";
@@ -36,22 +35,35 @@ export abstract class UserSession extends events.EventEmitter {
     }
 
     public decode(data: Buffer): IRpc {
-        try {
-            const buffer = new Buffer(data);
-            const len = buffer.readUInt32BE(0);
-            const msgId = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES);
-            const msgIdx = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
-            const rpc: IRpcMeta = this._rpcMetaMap[msgId];
-            if (!rpc) {
-                Log.sError(`handleInfo parse error, len=${len}, msgId=${msgId}, msgIdx=${msgIdx}`);
-                return;
-            }
-            let msg = rpc.reqEncoder.decode(buffer.slice(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES + MSG_HEADER_MSG_IDX_BYTES));
-            return {...rpc, msg: msg};
+        const buffer = new Buffer(data);
+        const len = buffer.readUInt32BE(0);
+        const msgId = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES);
+        const msgIdx = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
+        const rpc: IRpcMeta = this._rpcMetaMap[msgId];
+        if (!rpc) {
+            Log.sError(`handleInfo parse error, len=${len}, msgId=${msgId}, msgIdx=${msgIdx}`);
+            return;
         }
-        catch (e) {
-            Log.sError(e);
+        let msg = rpc.reqEncoder.decode(buffer.slice(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES + MSG_HEADER_MSG_IDX_BYTES));
+        return {...rpc, msg: msg};
+    }
+
+    public encode(msgId: number, msgEncoder?: any, msg?: any) {
+        let msgIdx = this.getNextMsgIdx();
+        let finalBuffer = new ByteBuffer();
+        if (msgEncoder && msg) {
+            let buffer = msgEncoder.encode(msg).finish();
+            finalBuffer.writeUint32(buffer.length + MSG_HEADER_TOTAL_BYTES);
+            finalBuffer.writeUint16(msgId);
+            finalBuffer.writeUint16(msgIdx);
+            finalBuffer.append(buffer);
         }
+        else {
+            finalBuffer.writeUint32(MSG_HEADER_TOTAL_BYTES);
+            finalBuffer.writeUint16(msgId);
+            finalBuffer.writeUint16(msgIdx);
+        }
+        return finalBuffer.buffer.slice(0, finalBuffer.offset);
     }
 
     public async update(): Promise<void> {
@@ -79,30 +91,12 @@ export abstract class UserSession extends events.EventEmitter {
     }
 
     public sendProtocol(msgId: number, msgEncoder?: any, msg?: any) {
-        try {
-            Log.sDebug('socketUid=%d send msgId=%d, %s=%j', this.socket ? this.socket.uid : 0, msgId, msg.constructor.name, msg);
-            let buffer = S2C.Message.encode(msg).finish();
-            let msgIdx = this.getNextMsgIdx();
-            let finalBuffer = new ByteBuffer();
-            finalBuffer.writeUint32(buffer.length + MSG_HEADER_TOTAL_BYTES);
-            finalBuffer.writeUint16(msgId);
-            finalBuffer.writeUint16(msgIdx);
-            finalBuffer.append(buffer);
-            this.send(finalBuffer.buffer.slice(0, finalBuffer.offset));
-            this.ackMsg.append([msgIdx, msg]);
+        Log.sDebug('socketUid=%d send msgId=%d, %s=%j', this.socket ? this.socket.uid : 0, msgId, msg.constructor.name, msg);
+        let buffer = this.encode(msgId, msgEncoder, msg);
+        if (msgEncoder && msg) {
+            this.ackMsg.append([this._curMsgIdx, msg]);
         }
-        catch (e) {
-            Log.sError(e);
-        }
-    }
-
-    buildMsgIdx() {
-        for (let k in this._rpcMetaMap) {
-            let rpc = this._rpcMetaMap[k];
-            if (rpc.reqEncoder) {
-                this._msgIdx[rpc.reqEncoder.name] = rpc.reqMsgId;
-            }
-        }
+        this.send(buffer);
     }
 
     getMsgId(msg) {
