@@ -27,7 +27,7 @@ enum ESessionState {
 
 export class RpcSession extends UserSession {
     private _rpcList: LinkedList<Rpc> = new LinkedList();
-    private _timers: Timer[] = [];
+    private _timers: { [timerName: string]: Timer } = {};
     private readonly _name: string;
     private readonly _host: string;
     private readonly _port: number;
@@ -49,10 +49,13 @@ export class RpcSession extends UserSession {
     }
 
     async init(): Promise<void> {
+        this._state = ESessionState.INIT;
         return new Promise<void>((resolve, reject) => {
             this._socket = new WebSocket('ws://' + this._host + ':' + this._port + '/websocket');
             this._socket.on('open', () => {
                 this._state = ESessionState.CONNECTED;
+                clearInterval(this._timers['reconnect']);
+                delete this._timers['reconnect'];
                 Log.sInfo(`rpc session ${this._name}, ${this._host}:${this._port} connected!`);
                 let pck = Zombie.Session_Init.create();
                 this.rpc(pck, this, (err, msg) => {
@@ -64,9 +67,17 @@ export class RpcSession extends UserSession {
             });
 
             this._socket.on('close', (code, reason) => {
+                this.close();
                 this._state = ESessionState.DISCONNECTED;
                 Log.sWarn(`rpc session ${this._name} close, code=${code}, reason=${reason}`);
-                // TODO reconnect
+                this._timers['reconnect'] = setInterval(async () => {
+                    if (this._state === ESessionState.CONNECTING) {
+                        return;
+                    }
+                    Log.sWarn(`rpc session ${this._name}, ${this._host}:${this._port} reconnecting!`);
+                    this._state = ESessionState.CONNECTING;
+                    await this.init().catch(e => Log.sError(e));
+                }, SECOND);
             });
 
             this._socket.on('error', (err) => {
@@ -106,7 +117,7 @@ export class RpcSession extends UserSession {
                 }
             });
 
-            this._timers.push(setInterval(async () => {
+            this._timers['checkRpcTimeout'] = setInterval(async () => {
                 let cur = this._rpcList.head;
                 let now = Date.now();
                 while (cur) {
@@ -116,21 +127,21 @@ export class RpcSession extends UserSession {
                     }
                     cur = cur.next;
                 }
-            }, SECOND));
+            }, SECOND);
 
-            this._timers.push(setInterval(async () => {
+            this._timers['heartBeat'] = setInterval(async () => {
                 if (this._state === ESessionState.CONNECTED) {
                     this._socket.send(this.encode(MSG_ID_HEART_BEAT));
                     Log.sDebug(`rpc session ${this._name} heart beat send`);
                 }
-            }, 15 * SECOND));
+            }, 15 * SECOND);
         });
     }
 
     close() {
         Log.sInfo(`rpc ${this._name} session close`);
         this._rpcList.clear();
-        this._timers.map(value => clearInterval(value));
+        Object.entries(this._timers).map(value => clearInterval(value[1]));
         this._socket.close();
     }
 

@@ -23,7 +23,7 @@ async function main() {
     Log.init(Global.config.log.dir, Global.config.log.level);
 
     registerProcessListener(async () => {
-        gameSession.close();
+        // gameSession.close();
         await server.stop();
         await GameWorld.instance.stop();
         await mainLoop.stop();
@@ -51,8 +51,8 @@ async function main() {
     mainLoop.run();
 
     // for test
-    let gameSession = new RpcSession('172.16.1.83', 5555, 'game', allRpc());
-    await gameSession.init();
+    // let gameSession = new RpcSession('172.16.1.83', 5556, 'game', allRpc());
+    // await gameSession.init();
 }
 
 main().then(async () => {
