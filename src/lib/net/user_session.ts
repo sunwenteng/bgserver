@@ -10,7 +10,7 @@ import {
     MSG_HEADER_LEN_BYTES,
     MSG_HEADER_MSG_ID_BYTES,
     MSG_HEADER_MSG_IDX_BYTES,
-    MSG_HEADER_TOTAL_BYTES
+    MSG_HEADER_TOTAL_BYTES, MSG_ID_ACK_MSG, MSG_ID_HEART_BEAT
 } from "../../app/game/modles/defines";
 
 export abstract class UserSession extends events.EventEmitter {
@@ -30,13 +30,22 @@ export abstract class UserSession extends events.EventEmitter {
 
         this.on('message', (data) => {
             let msgId = this.decodeMsgId(data);
-            const rpcMeta: IRpcMeta = this._rpcMetaMap[msgId];
-            if (!rpcMeta) {
-                Log.sError(`handleInfo parse error, msgId=${msgId}`);
-                return;
+            switch (msgId) {
+                case MSG_ID_HEART_BEAT:
+                    this.timeLastAlive = realNow();
+                    break;
+                case MSG_ID_ACK_MSG:
+                    break;
+                default:
+                    const rpcMeta: IRpcMeta = this._rpcMetaMap[msgId];
+                    if (!rpcMeta) {
+                        Log.sError(`handleInfo parse error, msgId=${msgId}`);
+                        return;
+                    }
+                    let msg = this.decode(data, rpcMeta.reqEncoder);
+                    this.rpcList.append({...rpcMeta, msg: msg});
+                    break;
             }
-            let msg = this.decode(data, rpcMeta.reqEncoder);
-            this.rpcList.append({...rpcMeta, msg: msg});
         });
     }
 

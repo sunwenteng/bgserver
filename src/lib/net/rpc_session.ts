@@ -2,7 +2,7 @@ import {LinkedList} from "../util/linked_list";
 import {Log} from "../util/log";
 import {
     IRpcDefinition,
-    IRpcMeta,
+    IRpcMeta, MSG_ID_HEART_BEAT,
     SECOND
 } from "../../app/game/modles/defines";
 import * as WebSocket from 'ws';
@@ -27,7 +27,7 @@ enum ESessionState {
 
 export class RpcSession extends UserSession {
     private _rpcList: LinkedList<Rpc> = new LinkedList();
-    private _timerCheckTimeout: Timer;
+    private _timers: Timer[] = [];
     private readonly _name: string;
     private readonly _host: string;
     private readonly _port: number;
@@ -106,7 +106,7 @@ export class RpcSession extends UserSession {
                 }
             });
 
-            this._timerCheckTimeout = setInterval(async () => {
+            this._timers.push(setInterval(async () => {
                 let cur = this._rpcList.head;
                 let now = Date.now();
                 while (cur) {
@@ -116,25 +116,40 @@ export class RpcSession extends UserSession {
                     }
                     cur = cur.next;
                 }
-            }, SECOND);
+            }, SECOND));
+
+            this._timers.push(setInterval(async () => {
+                if (this._state === ESessionState.CONNECTED) {
+                    this._socket.send(this.encode(MSG_ID_HEART_BEAT));
+                    Log.sDebug(`rpc session ${this._name} heart beat send`);
+                }
+            }, 15 * SECOND));
         });
     }
 
     close() {
         Log.sInfo(`rpc ${this._name} session close`);
         this._rpcList.clear();
-        clearInterval(this._timerCheckTimeout);
+        this._timers.map(value => clearInterval(value));
         this._socket.close();
     }
 
-    rpc(msg: any, self: any, cb: (err?, msg?) => void) {
+    /**
+     * @param msg
+     * @param self
+     * @param cb => if null just send msg
+     */
+    rpc(msg: any, self?: any, cb ?: (err?, msg?) => void) {
         let msgId = this._reqMsgIdx[msg.constructor.name];
         if (!msgId) {
             throw new Error(`rpc session ${this._name} ${msg.constructor.name} not found`);
         }
-        this._rpcList.append({msgId: msgId, msg: msg, cb: cb, self: self, ctime: Date.now()});
 
         let rpc = this._rpcMetaMap[msgId];
         this._socket.send(this.encode(msgId, rpc.reqEncoder, msg));
+
+        if (cb) {
+            this._rpcList.append({msgId: msgId, msg: msg, cb: cb, self: self, ctime: Date.now()});
+        }
     }
 }
