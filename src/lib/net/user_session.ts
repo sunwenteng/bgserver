@@ -12,6 +12,7 @@ import {
     MSG_HEADER_MSG_IDX_BYTES,
     MSG_HEADER_TOTAL_BYTES, MSG_ID_ACK_MSG, MSG_ID_HEART_BEAT
 } from "../../app/game/modles/defines";
+import {Zombie} from "../../app/proto/zombie";
 
 export abstract class UserSession extends events.EventEmitter {
     private _curMsgIdx: number = 0;
@@ -19,7 +20,7 @@ export abstract class UserSession extends events.EventEmitter {
     public timeLastAlive: number = realNow();
     public socket: WebSocket | any;
     public isAuthorized: boolean = false;
-    public ackMsg: LinkedList<[number, any]> = new LinkedList();
+    private _ackMsg: LinkedList<[number, any]> = new LinkedList();
 
     protected _rpcMetaMap: { [reqMsgId: number]: IRpcMeta } = {};
     protected _reqMsgIdx: { [reqEncoderName: string]: number } = {};
@@ -34,9 +35,19 @@ export abstract class UserSession extends events.EventEmitter {
                 case MSG_ID_HEART_BEAT:
                     this.timeLastAlive = realNow();
                     break;
-                case MSG_ID_ACK_MSG:
+                case MSG_ID_ACK_MSG: {
+                    let current = this._ackMsg.head;
+                    let msg = this.decode(data, Zombie.Ack_Msg);
+                    while (current) {
+                        if (current.element[0] === msg.msgIdx) {
+                            this._ackMsg.deleteNode(current);
+                            break;
+                        }
+                        current = current.next;
+                    }
                     break;
-                default:
+                }
+                default: {
                     const rpcMeta: IRpcMeta = this._rpcMetaMap[msgId];
                     if (!rpcMeta) {
                         Log.sError(`handleInfo parse error, msgId=${msgId}`);
@@ -45,6 +56,7 @@ export abstract class UserSession extends events.EventEmitter {
                     let msg = this.decode(data, rpcMeta.reqEncoder);
                     this.rpcList.append({...rpcMeta, msg: msg});
                     break;
+                }
             }
         });
     }
@@ -112,9 +124,18 @@ export abstract class UserSession extends events.EventEmitter {
         Log.sDebug('socketUid=%d send msgId=%d, %s=%j', this.socket ? this.socket.uid : 0, msgId, msg ? msg.constructor.name : 'None', msg ? msg : 'None');
         let buffer = this.encode(msgId, msgEncoder, msg);
         if (msgEncoder && msg) {
-            this.ackMsg.append([this._curMsgIdx, msg]);
+            this._ackMsg.append([this._curMsgIdx, buffer]);
         }
         this.send(buffer);
+    }
+
+    public sendAllAckMsg() {
+        let cur = this._ackMsg.head;
+        while (cur) {
+            this.send(cur.element[1]);
+            cur = cur.next;
+        }
+        this._ackMsg.clear();
     }
 
     getMsgId(msg) {

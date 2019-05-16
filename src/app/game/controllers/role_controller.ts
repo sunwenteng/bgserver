@@ -13,7 +13,7 @@ import * as WorldDB from '../../../lib/mysql/world_db';
 import * as LoginDB from '../../../lib/mysql/login_db';
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {gameNow} from "../../../lib/util/time";
-import {EActionCheckType, MSG_ID_SESSION_INIT_COMPLETE} from "../modles/defines";
+import {EActionCheckType} from "../modles/defines";
 
 @JsonController('/role')
 export class RoleController {
@@ -23,8 +23,6 @@ export class RoleController {
 
     @BGAction(EActionCheckType.noCheck)
     async online(session: GameSession, pck: Zombie.Session_Init) {
-        return;
-
         let roleId = parseInt(pck.uId);
         let role = new Role(roleId);
         await RedisMgr.getInstance(RedisType.GAME).lock(Role.getRedisKey(role.uid), async () => {
@@ -112,31 +110,19 @@ export class RoleController {
             // await role.activityModel.tick();
             // role.taskModel.buildTaskIdx();
 
-            // send client packet
-            role.sendFull();
-            role.session.sendProtocol(MSG_ID_SESSION_INIT_COMPLETE);
-
             let now = gameNow();
             role.session.timeLastAlive = now;
             role.lastLoginTime = now;
             role.save().catch(e => Log.uError(role.uid, e));
-        });
-    }
 
-    @BGAction()
-    async ackMsg(session: GameSession, pck: Zombie.Ack_Msg) {
-        let current = session.ackMsg.head;
-        while (current) {
-            if (current.element[0] === pck.msgIdx) {
-                session.ackMsg.deleteNode(current);
-                break;
+            // send client packet
+            if (pck.sId) {
+                role.session.sendAllAckMsg();
             }
-            current = current.next;
-        }
-    }
-
-    @BGAction()
-    async heartBeat(session: GameSession) {
-
+            else {
+                role.sendFull();
+            }
+            return Zombie.Session_Init.create({sId: role.session.socket.uid});
+        });
     }
 }

@@ -31,6 +31,7 @@ export class GameSession extends UserSession {
             reqMsgId: MSG_ID_SESSION_INIT,
             reqEncoder: Zombie.Session_Init,
             resMsgId: MSG_ID_SESSION_INIT_COMPLETE,
+            resEncoder: Zombie.Session_Init,
             controller: Container.get(RoleController.name),
             action: Container.get(RoleController.name)['online']
         };
