@@ -10,8 +10,8 @@ import {RoleController} from "../controllers/role_controller";
 /**
  * all rpc
  */
-export const rpcMetas: { [reqMsgId: number]: IRpcMeta } = {
-    1: {
+export const rpcMetas: IRpcMeta[] = [
+    {
         reqMsgId: 1,
         reqEncoder: Zombie.Session_Init,
         resMsgId: 1,
@@ -19,11 +19,11 @@ export const rpcMetas: { [reqMsgId: number]: IRpcMeta } = {
         controller: getBean(RoleController),
         action: getBean(RoleController)['online'],
     },
-    2: {
+    {
         reqMsgId: 2,
         resMsgId: 2,
     }
-};
+];
 
 /****************************************************************************************************************/
 export class Item extends BGObject {
