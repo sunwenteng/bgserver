@@ -10,6 +10,11 @@ export const MAX_NAME_LENGTH = 18;
 
 export const GM_RES_RELOAD_FLAG = '.todo';
 
+export interface IRpcDefinition {
+    rpc: { [reqMsgId: number]: IRpcMeta };
+    idx: { [reqEncoderName: string]: number };
+}
+
 export interface IRpc extends IRpcMeta {
     msg: any;
 }

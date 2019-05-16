@@ -22,30 +22,39 @@ export abstract class UserSession extends events.EventEmitter {
     public ackMsg: LinkedList<[number, any]> = new LinkedList();
 
     protected _rpcMetaMap: { [reqMsgId: number]: IRpcMeta } = {};
-    protected _msgIdx: { [reqEncoderName: string]: number } = {};
+    protected _reqMsgIdx: { [reqEncoderName: string]: number } = {};
 
     constructor() {
         super();
         this.rpcList = new LinkedList<any>();
 
         this.on('message', (data) => {
-            let rpc = this.decode(data);
-            this.rpcList.append(rpc);
+            let msgId = this.decodeMsgId(data);
+            const rpcMeta: IRpcMeta = this._rpcMetaMap[msgId];
+            if (!rpcMeta) {
+                Log.sError(`handleInfo parse error, msgId=${msgId}`);
+                return;
+            }
+            let msg = this.decode(data, rpcMeta.reqEncoder);
+            this.rpcList.append({...rpcMeta, msg: msg});
         });
     }
 
-    public decode(data: Buffer): IRpc {
+    public decodeMsgIdx(data: Buffer) {
+        return data.readUInt16BE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
+    }
+
+    public decodeMsgId(data: Buffer) {
+        return data.readUInt16BE(MSG_HEADER_LEN_BYTES);
+    }
+
+    public decode(data: Buffer, decoder?: any): any {
         const buffer = Buffer.from(data);
-        const len = buffer.readUInt32BE(0);
-        const msgId = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES);
-        const msgIdx = buffer.readUInt16BE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
-        const rpc: IRpcMeta = this._rpcMetaMap[msgId];
-        if (!rpc) {
-            Log.sError(`handleInfo parse error, len=${len}, msgId=${msgId}, msgIdx=${msgIdx}`);
-            return;
+        let msg = null;
+        if (decoder) {
+            msg = decoder.decode(buffer.slice(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES + MSG_HEADER_MSG_IDX_BYTES));
         }
-        let msg = rpc.reqEncoder.decode(buffer.slice(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES + MSG_HEADER_MSG_IDX_BYTES));
-        return {...rpc, msg: msg};
+        return msg;
     }
 
     public encode(msgId: number, msgEncoder?: any, msg?: any) {
@@ -91,7 +100,7 @@ export abstract class UserSession extends events.EventEmitter {
     }
 
     public sendProtocol(msgId: number, msgEncoder?: any, msg?: any) {
-        Log.sDebug('socketUid=%d send msgId=%d, %s=%j', this.socket ? this.socket.uid : 0, msgId, msg.constructor.name, msg);
+        Log.sDebug('socketUid=%d send msgId=%d, %s=%j', this.socket ? this.socket.uid : 0, msgId, msg ? msg.constructor.name : 'None', msg ? msg : 'None');
         let buffer = this.encode(msgId, msgEncoder, msg);
         if (msgEncoder && msg) {
             this.ackMsg.append([this._curMsgIdx, msg]);
@@ -100,7 +109,7 @@ export abstract class UserSession extends events.EventEmitter {
     }
 
     getMsgId(msg) {
-        return this._msgIdx[msg.constructor.name];
+        return this._reqMsgIdx[msg.constructor.name];
     }
 
     getRpcMeta(msgId) {

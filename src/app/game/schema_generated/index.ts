@@ -1,10 +1,10 @@
 import * as RoleRpc from "./role_rpc";
-import {IRpcMeta} from "../modles/defines";
+import {IRpcDefinition, IRpcMeta} from "../modles/defines";
 
 let rpcMetas: { [msgId: number]: IRpcMeta } = {};
 let msgIdx: { [reqEncoderName: string]: number } = {};
 
-export let allRpc = () => {
+export let allRpc = (): IRpcDefinition => {
     if (Object.keys(rpcMetas).length === 0) {
         rpcMetas = {...RoleRpc.rpcMetas};
         for (let msgId in rpcMetas) {

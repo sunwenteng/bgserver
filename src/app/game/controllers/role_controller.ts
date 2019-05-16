@@ -23,6 +23,8 @@ export class RoleController {
 
     @BGAction(EActionCheckType.noCheck)
     async online(session: GameSession, pck: Zombie.Session_Init) {
+        return;
+
         let roleId = parseInt(pck.uId);
         let role = new Role(roleId);
         await RedisMgr.getInstance(RedisType.GAME).lock(Role.getRedisKey(role.uid), async () => {

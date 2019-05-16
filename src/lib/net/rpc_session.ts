@@ -1,6 +1,10 @@
 import {LinkedList} from "../util/linked_list";
 import {Log} from "../util/log";
-import {SECOND} from "../../app/game/modles/defines";
+import {
+    IRpcDefinition,
+    IRpcMeta,
+    SECOND
+} from "../../app/game/modles/defines";
 import * as WebSocket from 'ws';
 import {UserSession} from "./user_session";
 import Timer = NodeJS.Timer;
@@ -9,7 +13,7 @@ import {Zombie} from "../../app/proto/zombie";
 interface Rpc {
     msgId: number;
     msg: any;
-    cb: (err, msg) => void;
+    cb: (err?, msg?) => void;
     self: any;
     ctime: number;
 }
@@ -29,14 +33,19 @@ export class RpcSession extends UserSession {
     private readonly _port: number;
     private _socket: WebSocket;
     private _state: ESessionState = ESessionState.INIT;
+    private _resMsgIdx: { [resMsgId: number]: IRpcMeta } = {};
 
-    constructor(host: string, port: number, name: string, data) {
+    constructor(host: string, port: number, name: string, data: IRpcDefinition) {
         super();
         this._host = host;
         this._port = port;
         this._name = name;
+        this._reqMsgIdx = data.idx;
         this._rpcMetaMap = data.rpc;
-        this._msgIdx = data.idx;
+        for (let reqMsgId in this._rpcMetaMap) {
+            const rpc = this._rpcMetaMap[reqMsgId];
+            this._resMsgIdx[rpc.resMsgId] = rpc;
+        }
     }
 
     async init(): Promise<void> {
@@ -71,15 +80,29 @@ export class RpcSession extends UserSession {
             });
 
             this._socket.on('message', async (data: Buffer) => {
-                let rpc = this.decode(data);
-                let cur = this._rpcList.head;
+                const msgId = this.decodeMsgId(data);
+                const msgIdx = this.decodeMsgIdx(data);
+                const rpc: IRpcMeta = this._resMsgIdx[msgId];
+                if (!rpc) {
+                    Log.sError(`handleInfo parse error, msgId=${msgId}`);
+                    return;
+                }
+
+                let msg = this.decode(data, rpc.resEncoder);
+
+                let cur = this._rpcList.head, bRpcProcessed = false;
                 while (cur) {
                     if (cur.element.msgId === rpc.reqMsgId) {
-                        await cur.element.cb.apply(cur.element.self, [null, rpc.msg]);
+                        await cur.element.cb.apply(cur.element.self, [null, msg]);
+                        bRpcProcessed = true;
                         this._rpcList.deleteNode(cur);
                         break;
                     }
                     cur = cur.next;
+                }
+
+                if (!bRpcProcessed) {
+                    Log.sError(`rpc session ${this._name} not process, msgId=${msgId}, msgIdx=${msgIdx}`);
                 }
             });
 
@@ -104,8 +127,8 @@ export class RpcSession extends UserSession {
         this._socket.close();
     }
 
-    rpc(msg: any, self: any, cb: (err, msg) => void) {
-        let msgId = this._msgIdx[msg.constructor.name];
+    rpc(msg: any, self: any, cb: (err?, msg?) => void) {
+        let msgId = this._reqMsgIdx[msg.constructor.name];
         if (!msgId) {
             throw new Error(`rpc session ${this._name} ${msg.constructor.name} not found`);
         }
