@@ -73,12 +73,12 @@ gulp.task('svn_update_server', (cb) => {
     });
 });
 
-gulp.task('compile', ['scripts_src'], () => {
+gulp.task('compile', gulp.series('scripts_src', () => {
     return gulp.src(['src/**/*.js', '!src/app/proto/cmd.client.js', 'src/**/*.json'])
         .pipe(gulp.dest('dist/'));
-});
+}));
 
-gulp.task('archive_linux', ['compile'], (cb) => {
+gulp.task('archive_linux', gulp.series('compile', (cb) => {
     if (process.platform !== 'linux') {
         console.error('');
         cb();
@@ -101,10 +101,10 @@ gulp.task('archive_linux', ['compile'], (cb) => {
             cb();
         })
     }
-});
+}));
 
 // wx测试副 pwd: honglajiao123
-gulp.task('deploy_wx', ['archive_linux'], (cb) => {
+gulp.task('deploy_wx', gulp.series('archive_linux', (cb) => {
     if (process.platform !== 'linux') {
         console.error('');
         cb();
@@ -119,10 +119,10 @@ gulp.task('deploy_wx', ['archive_linux'], (cb) => {
             cb();
         })
     }
-});
+}));
 
 // 外网测试副 pwd: pass@ime
-gulp.task('deploy', ['archive_linux'], (cb) => {
+gulp.task('deploy', gulp.series('archive_linux', (cb) => {
     if (process.platform !== 'linux') {
         console.error('');
         cb();
@@ -137,10 +137,10 @@ gulp.task('deploy', ['archive_linux'], (cb) => {
             cb();
         })
     }
-});
+}));
 
 // 内网测试服
-gulp.task('deploy_dev', ['archive_linux'], (cb) => {
+gulp.task('deploy_dev', gulp.series('archive_linux', (cb) => {
     if (process.platform !== 'linux') {
         console.error('');
         cb();
@@ -155,10 +155,10 @@ gulp.task('deploy_dev', ['archive_linux'], (cb) => {
             cb();
         })
     }
-});
+}));
 
 // 内网测试服
-gulp.task('deploy_dev', ['archive_linux'], (cb) => {
+gulp.task('deploy_dev', gulp.series('archive_linux', (cb) => {
     if (process.platform !== 'linux') {
         console.error('');
         cb();
@@ -173,9 +173,9 @@ gulp.task('deploy_dev', ['archive_linux'], (cb) => {
             cb();
         })
     }
-});
+}));
 
-gulp.task('proto_server', ['proto2js'], (cb) => {
+gulp.task('proto_server', gulp.series('proto2js', (cb) => {
     function capitalize(str) {
         return str.toLowerCase().replace(/( |^)[a-z]/g, (L) => L.toUpperCase());
     }
@@ -232,4 +232,4 @@ gulp.task('proto_server', ['proto2js'], (cb) => {
         fs.writeFileSync(file, fileContents[file]);
     }
     cb();
-});
+}));
