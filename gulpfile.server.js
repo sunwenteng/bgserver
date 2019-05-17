@@ -3,11 +3,18 @@ const $ = require('gulp-load-plugins')();
 const exec = require('child_process').exec;
 const fs = require('fs');
 const path = require("path");
+const crypto = require('crypto');
 
 function execP(cmd) {
     return new Promise((resolve, reject) => {
         exec(cmd, resolve).on('error', reject);
     });
+}
+
+function md5(content) {
+    let md5sum = crypto.createHash('md5');
+    md5sum.update(content, 'utf8');
+    return md5sum.digest('hex');
 }
 
 function splitByCapital(str) {
@@ -25,20 +32,30 @@ function splitByCapital(str) {
 gulp.task('proto2js', async () => {
     const protoDirs = [/*path.resolve('./src/app/proto'), */path.resolve('./src/app/game/schema')];
     let protoFiles = [], jsFiles = [], tsFiles = [];
+    let protoCache = {};
+    if (fs.existsSync('./.proto_cache')) {
+        protoCache = JSON.parse(fs.readFileSync('./.proto_cache').toString());
+    }
     for (let protoDir of protoDirs) {
         const files = fs.readdirSync(protoDir);
         for (let file of files) {
             if (file.search(/^.*?\.(proto)$/) !== -1) {
-                protoFiles.push(path.join(protoDir, file));
+                let protoFilePath = path.join(protoDir, file);
+                let newMd5 = md5(fs.readFileSync(protoFilePath));
+                if (newMd5 === protoCache[protoFilePath]) {
+                    continue;
+                }
+                protoCache[protoFilePath] = newMd5;
+                protoFiles.push(protoFilePath);
                 let nameArray = file.split('.');
                 jsFiles.push(path.join(protoDir, nameArray[0] + '.proto.js'));
                 tsFiles.push(path.join(protoDir, nameArray[0] + '.proto.d.ts'));
                 // auto generate controller file if needed
-                // let controllerFileName = path.resolve(protoDir, '../controllers/' + splitByCapital(nameArray[0]).join('_') + '.ts');
-                // if (!fs.existsSync(controllerFileName)) {
-                //     fs.writeFileSync(controllerFileName, `export class ${nameArray[0]} {}`);
-                //     console.log(`controller ${nameArray[0]} not exist, then auto create`);
-                // }
+                let controllerFileName = path.resolve(protoDir, '../controllers/' + splitByCapital(nameArray[0]).join('_') + '.ts');
+                if (!fs.existsSync(controllerFileName)) {
+                    fs.writeFileSync(controllerFileName, `export class ${nameArray[0]} {}`);
+                    console.log(`controller ${nameArray[0]} not exist, then auto create`);
+                }
             }
         }
     }
@@ -48,6 +65,8 @@ gulp.task('proto2js', async () => {
         console.log(protoFile);
         await execP(`npx pbjs -t static-module -w commonjs -o ${jsFiles[i]} ${protoFile} && npx pbts --no-comments -o ${tsFiles[i]} ${jsFiles[i]}`)
     }
+
+    fs.writeFileSync('./.proto_cache', JSON.stringify(protoCache));
 });
 
 gulp.task('scripts_src', /*['svn_update_server'],*/ () => {
