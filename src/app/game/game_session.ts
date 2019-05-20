@@ -7,10 +7,10 @@ import {execTime} from "../../lib/util/descriptor";
 import {IntervalTimer, realNow} from "../../lib/util/time";
 import * as LoginDB from '../../lib/mysql/login_db';
 import {IRpc, IRpcDefinition, MSG_ID_SESSION_INIT, MSG_ID_SESSION_INIT_COMPLETE,} from "./modles/defines";
-import {allRpc} from "./schema_generated";
 import {Zombie} from "../proto/zombie";
 import {RoleController} from "./controllers/role_controller";
 import {Container} from "typedi";
+import {allRpc} from "./schema/SRole";
 
 const MAX_PACKET_COUNT = 10000;
 

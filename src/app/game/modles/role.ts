@@ -13,7 +13,7 @@ import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
 import {BGField, EBGValueType} from "../../../lib/util/bg_util";
 import {S2C} from "../../proto/s2c";
 import * as ByteBuffer from "bytebuffer";
-import {RoleModel} from "../schema_generated/role_rpc";
+import {RoleModel} from "../schema/RoleService";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';
@@ -41,6 +41,12 @@ export class Role extends RoleModel {
     loginDevice: string = '';
     loginDeviceType: string = '';
     consumeInfo: IConsumeInfo[] = [];
+
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) uid: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) gmAuth: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) vipLv: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) vipExp: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) guildId: number = 0;
 
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) timeLastGm: number = 0;
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, false) state: ERoleState = ERoleState.normal;
@@ -130,10 +136,8 @@ export class Role extends RoleModel {
 
     public async create(name?: string, gender?: number, iconId?: number, inviter?: number) {
         this.createTime = realNow();
-        this.nickname = name ? name : 'robot' + this.uid;
-        this.gender = gender ? gender : 0;
-        this.iconId = iconId ? iconId : 0;
-        this.level = 1;
+        this.name = name ? name : 'robot' + this.uid;
+        this.lv = 1;
         // TODO
 
         this.computeCombat();
@@ -311,13 +315,13 @@ export class Role extends RoleModel {
         }
         let data = {
             role_id: this.uid,
-            name: this.nickname,
+            name: this.name,
             gm_auth: this.gmAuth,
             status: this.state,
             progress: this.exp,
-            level: this.level,
+            level: this.lv,
             cur_train: 0,
-            vip_level: this.vipLevel,
+            vip_level: this.vipLv,
             vip_exp: this.vipExp,
             create_time: this.createTime,
             last_login_time: this.lastLoginTime

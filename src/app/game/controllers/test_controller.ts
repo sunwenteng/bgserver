@@ -10,7 +10,7 @@ import {S2C} from "../../proto/s2c";
 import {Post} from "routing-controllers/decorator/Post";
 import {GameSession} from "../game_session";
 import * as ByteBuffer from "bytebuffer";
-import {Item} from "../schema_generated/role_rpc";
+// import {Item} from "../schema_generated/role_rpc";
 
 @JsonController('/test')
 export class TestController {
@@ -48,53 +48,53 @@ export class TestController {
         let uid = params['uid'] ? params['uid'] : 1;
         let roleB = new Role(uid, new GameSession());
 
-        roleB.sendProtocol(S2C.SC_GET_REWARD.create());
-
-        let exist = await roleB.load();
-        if (!exist) {
-            await roleB.create('haha' + uid);
-        }
-
-        roleB.sendFull();
-
-        // roleB.testArray.push(1);
-
-        let len = roleB.itemModel.itemMap.length;
-        if (len < 3000) {
-            for (let i = len; i < len + 100; ++i) {
-                let item = new Item();
-                item.id = i;
-                item.cnt = 1;
-                item.uid = i;
-                roleB.itemModel.itemMap.set(i, item);
-            }
-        }
-
-        // for (let i = 1; i <= params['cnt']; ++i) {
-        //     let e = roleB.itemModel.itemMap.get(i);
-        //     while (e) {
-        //         let cnt = Math.floor(Math.random() * 100);
-        //         if (cnt !== e.cnt) {
-        //             e.cnt = cnt;
-        //             break;
-        //         }
+        // roleB.sendProtocol(S2C.SC_GET_REWARD.create());
+        //
+        // let exist = await roleB.load();
+        // if (!exist) {
+        //     await roleB.create('haha' + uid);
+        // }
+        //
+        // roleB.sendFull();
+        //
+        // // roleB.testArray.push(1);
+        //
+        // let len = roleB.itemModel.itemMap.length;
+        // if (len < 3000) {
+        //     for (let i = len; i < len + 100; ++i) {
+        //         let item = new Item();
+        //         item.id = i;
+        //         item.cnt = 1;
+        //         item.uid = i;
+        //         roleB.itemModel.itemMap.set(i, item);
         //     }
         // }
-
-        roleB.combat = Math.floor(Math.random() * 1000);
-
-        roleB.sendDelta(true);
-        console.log(roleB.dirtyFields());
-
-        await roleB.save();
-        console.log(roleB.dirtyFields());
-
-        // for (let i = 0; i < 2000; i++) {
-        //     roleB.combat = i;
-        //     roleB.save();
-        // }
-
-        return 'hello my len=' + roleB.itemModel.itemMap.length;
+        //
+        // // for (let i = 1; i <= params['cnt']; ++i) {
+        // //     let e = roleB.itemModel.itemMap.get(i);
+        // //     while (e) {
+        // //         let cnt = Math.floor(Math.random() * 100);
+        // //         if (cnt !== e.cnt) {
+        // //             e.cnt = cnt;
+        // //             break;
+        // //         }
+        // //     }
+        // // }
+        //
+        // roleB.combat = Math.floor(Math.random() * 1000);
+        //
+        // roleB.sendDelta(true);
+        // console.log(roleB.dirtyFields());
+        //
+        // await roleB.save();
+        // console.log(roleB.dirtyFields());
+        //
+        // // for (let i = 0; i < 2000; i++) {
+        // //     roleB.combat = i;
+        // //     roleB.save();
+        // // }
+        //
+        // return 'hello my len=' + roleB.itemModel.itemMap.length;
     }
 
     @Post()
