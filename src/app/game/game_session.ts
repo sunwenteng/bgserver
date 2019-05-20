@@ -10,7 +10,7 @@ import {IRpc, IRpcDefinition, MSG_ID_SESSION_INIT, MSG_ID_SESSION_INIT_COMPLETE,
 import {Zombie} from "../proto/zombie";
 import {RoleController} from "./controllers/role_controller";
 import {Container} from "typedi";
-import {allRpc} from "./schema/SRole";
+import {allRpc} from "./schema_generated/SRole";
 
 const MAX_PACKET_COUNT = 10000;
 

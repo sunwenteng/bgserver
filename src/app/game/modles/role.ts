@@ -13,7 +13,7 @@ import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
 import {BGField, EBGValueType} from "../../../lib/util/bg_util";
 import {S2C} from "../../proto/s2c";
 import * as ByteBuffer from "bytebuffer";
-import {RoleModel} from "../schema/RoleService";
+import {RoleModel} from "../schema_generated/RoleService";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';

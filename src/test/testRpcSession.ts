@@ -1,8 +1,8 @@
 import 'mocha';
 import {RpcSession} from "../lib/net/rpc_session";
-import {allRpc, name, hashMd5} from "../app/game/schema/SRoleBattle";
+import {allRpc, name, hashMd5} from "../app/game/schema_generated/SRoleBattle";
 import {Log} from "../lib/util/log";
-import {Hit} from "../app/game/schema/cmd";
+import {Hit} from "../app/game/schema_generated/cmd";
 
 describe('rpc_session', () => {
     it('connect', async () => {

@@ -30,7 +30,7 @@ function splitByCapital(str) {
 }
 
 gulp.task('proto2js', async () => {
-    const protoDirs = [/*path.resolve('./src/app/proto'), */path.resolve('./src/app/game/schema')];
+    const protoDirs = [/*path.resolve('./src/app/proto'), */path.resolve('./src/app/game/schema_generated')];
     let protoFiles = [];
     for (let protoDir of protoDirs) {
         const files = fs.readdirSync(protoDir);
@@ -58,7 +58,7 @@ gulp.task('proto2js', async () => {
                                 fs.writeFileSync(controllerFileName, `import {BGAction} from "../../../lib/util/descriptor";
 import {JsonController} from "routing-controllers";
 import {Role} from "../modles/role";
-import {Hit} from "../schema/cmd";
+import {Hit} from "../schema_generated/cmd";
 
 @JsonController('/${filePrefix}')
 export class ${nameArray[0]} {

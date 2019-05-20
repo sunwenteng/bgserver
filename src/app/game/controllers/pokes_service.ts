@@ -1,7 +1,7 @@
 import {BGAction} from "../../../lib/util/descriptor";
 import {JsonController} from "routing-controllers";
 import {Role} from "../modles/role";
-import {Hit} from "../schema/cmd";
+import {Hit} from "../schema_generated/cmd";
 
 @JsonController('/pokes')
 export class PokesService {
