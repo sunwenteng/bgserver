@@ -14,6 +14,7 @@ import {BGField, EBGValueType} from "../../../lib/util/bg_util";
 import {S2C} from "../../proto/s2c";
 import * as ByteBuffer from "bytebuffer";
 import {RoleModel} from "../schema_generated/RoleService";
+import {ItemBag} from "../schema_generated/BagService";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';
@@ -41,6 +42,8 @@ export class Role extends RoleModel {
     loginDevice: string = '';
     loginDeviceType: string = '';
     consumeInfo: IConsumeInfo[] = [];
+
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, false) itemBag: ItemBag = new ItemBag(this);
 
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) uid: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) gmAuth: number = 0;
