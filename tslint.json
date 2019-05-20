@@ -30,7 +30,6 @@
     "no-namespace": [true, "allow-declarations"],
     "no-reference": true,
     "no-string-throw": true,
-    "no-unused-variable": true,
     "no-var-keyword": true,
     "only-arrow-functions": [true, "allow-declarations", "allow-named-functions"],
     "restrict-plus-operands": true,

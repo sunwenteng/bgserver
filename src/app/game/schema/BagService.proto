@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package Hit;
+
+message ItemBagEntry{
+    int32   uid = 1;
+    int32   id = 2;
+    int32   cnt = 3;
+}
+
+message BagRes{
+    int32   uid = 1;
+    int32   id = 2;
+}
+
+message ItemBag{
+    repeated ItemBagEntry   items = 1;
+    int32   gold = 2;
+    int32   diamond = 3;
+    map<int32, ItemBagEntry>   goods = 4;
+    map<string, BagRes>   bags = 5;
+    int64   bigNum1 = 6;
+    uint64   bigNum2 = 7;
+}
+
+message CR_USE_ITEM{
+    int32   itemUid = 1;
+}
+
+message RC_USE_ITEM_RESULT{
+    int32   errCode = 1;
+}
+

@@ -238,6 +238,7 @@ export abstract class BGObject {
             buffer.writeUint32(selfUid);
         }
         let modBuffer = new ByteBuffer();
+        modBuffer.LE(true);
         let modCnt = 0;
         for (let k in this.__fields) {
             const o: IField = this.__fields[k];
@@ -369,6 +370,8 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
                 this.set(k, data[k]);
             }
         }
+
+        this._binlog.LE(true);
     }
 
     set valueT(p: EBGValueType) {
@@ -575,6 +578,8 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
                 this.push(a);
             }
         }
+
+        this._binlog.LE(true);
     }
 
     set valueT(p: EBGValueType) {

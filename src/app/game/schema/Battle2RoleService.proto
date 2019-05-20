@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+import "DatasBattle.proto";
+
+package Hit;
+

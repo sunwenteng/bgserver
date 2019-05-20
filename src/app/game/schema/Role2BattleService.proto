@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package Hit;
+
+message BR_PLAYER_INFO{
+    string   uid = 1;
+}
+
+message RB_PLAYER_INFO_RESULT{
+    string   uid = 1;
+}
+

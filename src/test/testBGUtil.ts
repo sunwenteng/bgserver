@@ -42,6 +42,7 @@ describe('bg_util', () => {
     it('1', () => {
         let role = new Role();
         let buffer = new ByteBuffer();
+        buffer.LE(true);
         role.encodeFull(buffer);
         buffer.clear();
 

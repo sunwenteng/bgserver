@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+import "DatasBattle.proto";
+import "DatasCommon.proto";
+
+package Hit;
+
+enum E_ADVENTURE_EVENT{
+    EAE_ADV = 0;
+    EAE_BATTLE = 1;
+}
+
+message AdventureInfo{
+    int32   adventureStageId = 1;
+    int32   stageExp = 2;
+}
+
+message STC_ADVENTURE{
+    int32   advId = 1;
+    repeated int32   params = 2;
+}
+
+message RC_ADVENTURE_RESULT{
+    E_ADVENTURE_EVENT   evt = 1;
+    STC_REWARD   rwd = 2;
+    STC_BATTLE_RESULT   battleResult = 3;
+    STC_ADVENTURE   adv = 4;
+    int32   errCode = 5;
+}
+

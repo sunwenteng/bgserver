@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package Hit;
+
+enum E_REWARD_TYPE{
+    ERT_RES = 0;
+    ERT_BAG_ITEM = 1;
+    ERT_POKE = 2;
+}
+
+message STC_REWARD_ENTRY{
+    E_REWARD_TYPE   type = 1;
+    int32   id = 2;
+    int32   cnt = 3;
+}
+
+message STC_REWARD{
+    repeated STC_REWARD_ENTRY   rwds = 1;
+}
+

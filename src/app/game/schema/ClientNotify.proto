@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "DatasCommon.proto";
+
+package Hit;
+
+message BROADCAST_PARAM{
+    int32   type = 1;
+    string   val = 2;
+}
+
+message RC_BROADCAST{
+    string   content = 1;
+    repeated BROADCAST_PARAM   params = 2;
+}
+
+message RC_LV_UP{
+    int32   lv = 1;
+    STC_REWARD   rwd = 2;
+}
+

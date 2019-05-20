@@ -13,7 +13,7 @@ import * as WorldDB from '../../../lib/mysql/world_db';
 import * as LoginDB from '../../../lib/mysql/login_db';
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {gameNow} from "../../../lib/util/time";
-import {EActionCheckType} from "../modles/defines";
+import {EActionCheckType, MSG_ID_SESSION_INIT, MSG_ID_SESSION_INIT_COMPLETE} from "../modles/defines";
 
 @JsonController('/role')
 export class RoleController {
@@ -122,7 +122,8 @@ export class RoleController {
             else {
                 role.sendFull();
             }
-            return Zombie.Session_Init.create({sId: role.session.socket.uid});
+            role.session.sendProtocol(MSG_ID_SESSION_INIT, Zombie.Session_Init, Zombie.Session_Init.create({sId: role.session.socket.uid}));
+            role.session.sendProtocol(MSG_ID_SESSION_INIT_COMPLETE);
         });
     }
 }

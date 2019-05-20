@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package Hit;
+
+message CR_PAY{
+    int32   payId = 1;
+}
+
+message RC_PAY_RESULT{
+    int32   cnt = 1;
+}
+
+message ShopList{
+    repeated ShopListItem   items = 1;
+}
+
+message ShopListItem{
+    int32   payId = 1;
+    int32   payType = 2;
+    int32   payCnt = 3;
+    int32   itemId = 4;
+    int32   itemCnt = 5;
+    string   name = 6;
+    string   desc = 7;
+    string   icon = 8;
+}
+

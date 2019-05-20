@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package Hit;
+
+message CR_DEL_MAIL{
+    uint32   mailId = 1;
+}
+
+message RC_DEL_MAIL_RESULT{
+    uint32   mailId = 1;
+}
+
+message GetItemMsg{
+    uint32   mailId = 1;
+    string   receiverUid = 2;
+    int32   itemId = 3;
+    int32   cnt = 4;
+}
+
+message GetItemMsgList{
+    repeated GetItemMsg   mails = 1;
+}
+

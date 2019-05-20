@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "DatasCommon.proto";
+
+package Hit;
+
+enum E_GACHA_TYPE{
+    UGT_NORMAL = 0;
+    UGT_SPECIAL = 1;
+}
+
+message CR_GACHA{
+    E_GACHA_TYPE   type = 1;
+    int32   cnt = 2;
+}
+
+message RC_GACHA_RESULT{
+    STC_REWARD   pokes = 1;
+    int32   errorCode = 2;
+}
+

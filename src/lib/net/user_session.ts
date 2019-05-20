@@ -10,7 +10,9 @@ import {
     MSG_HEADER_LEN_BYTES,
     MSG_HEADER_MSG_ID_BYTES,
     MSG_HEADER_MSG_IDX_BYTES,
-    MSG_HEADER_TOTAL_BYTES, MSG_ID_ACK_MSG, MSG_ID_HEART_BEAT
+    MSG_HEADER_TOTAL_BYTES,
+    MSG_ID_ACK_MSG,
+    MSG_ID_HEART_BEAT, MSG_SYS_DEFAULT_RANGE
 } from "../../app/game/modles/defines";
 import {Zombie} from "../../app/proto/zombie";
 
@@ -62,11 +64,11 @@ export abstract class UserSession extends events.EventEmitter {
     }
 
     public decodeMsgIdx(data: Buffer) {
-        return data.readUInt16BE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
+        return data.readUInt16LE(MSG_HEADER_LEN_BYTES + MSG_HEADER_MSG_ID_BYTES);
     }
 
     public decodeMsgId(data: Buffer) {
-        return data.readUInt16BE(MSG_HEADER_LEN_BYTES);
+        return data.readUInt16LE(MSG_HEADER_LEN_BYTES);
     }
 
     public decode(data: Buffer, decoder?: any): any {
@@ -79,11 +81,14 @@ export abstract class UserSession extends events.EventEmitter {
     }
 
     public encode(msgId: number, msgEncoder?: any, msg?: any) {
-        let msgIdx = this.getNextMsgIdx();
+        let msgIdx = msgId < MSG_SYS_DEFAULT_RANGE ? 0 : this.getNextMsgIdx();
         let finalBuffer = new ByteBuffer();
+        finalBuffer.LE(true);
+        let len = 0;
         if (msgEncoder && msg) {
             let buffer = msgEncoder.encode(msg).finish();
-            finalBuffer.writeUint32(buffer.length + MSG_HEADER_TOTAL_BYTES);
+            len = buffer.length + MSG_HEADER_TOTAL_BYTES;
+            finalBuffer.writeUint32(len);
             finalBuffer.writeUint16(msgId);
             finalBuffer.writeUint16(msgIdx);
             finalBuffer.append(buffer);
@@ -93,6 +98,7 @@ export abstract class UserSession extends events.EventEmitter {
             finalBuffer.writeUint16(msgId);
             finalBuffer.writeUint16(msgIdx);
         }
+        Log.sDebug(`msgId=${msgId}, msgIdx=${msgIdx}, len=${len}`);
         return finalBuffer.buffer.slice(0, finalBuffer.offset);
     }
 

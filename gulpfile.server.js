@@ -31,11 +31,11 @@ function splitByCapital(str) {
 
 gulp.task('proto2js', async () => {
     const protoDirs = [/*path.resolve('./src/app/proto'), */path.resolve('./src/app/game/schema')];
-    let protoFiles = [], jsFiles = [], tsFiles = [];
+    let protoFiles = [];
     let protoCache = {};
-    if (fs.existsSync('./.proto_cache')) {
-        protoCache = JSON.parse(fs.readFileSync('./.proto_cache').toString());
-    }
+    // if (fs.existsSync('./.proto_cache')) {
+    //     protoCache = JSON.parse(fs.readFileSync('./.proto_cache').toString());
+    // }
     for (let protoDir of protoDirs) {
         const files = fs.readdirSync(protoDir);
         for (let file of files) {
@@ -48,8 +48,6 @@ gulp.task('proto2js', async () => {
                 protoCache[protoFilePath] = newMd5;
                 protoFiles.push(protoFilePath);
                 let nameArray = file.split('.');
-                jsFiles.push(path.join(protoDir, nameArray[0] + '.proto.js'));
-                tsFiles.push(path.join(protoDir, nameArray[0] + '.proto.d.ts'));
                 // auto generate controller file if needed
                 let controllerFileName = path.resolve(protoDir, '../controllers/' + splitByCapital(nameArray[0]).join('_') + '.ts');
                 if (!fs.existsSync(controllerFileName)) {
@@ -58,15 +56,13 @@ gulp.task('proto2js', async () => {
                 }
             }
         }
+
+        const jsFile = path.join(protoDir, './cmd.js');
+        const tsFile = path.join(protoDir, './cmd.d.ts');
+        await execP(`npx pbjs -t static-module -w commonjs -o ${jsFile} ${protoFiles.join(' ')} && npx pbts --no-comments -o ${tsFile} ${jsFile}`)
     }
 
-    for (let i = 0; i < protoFiles.length; i++) {
-        const protoFile = protoFiles[i];
-        console.log(protoFile);
-        await execP(`npx pbjs -t static-module -w commonjs -o ${jsFiles[i]} ${protoFile} && npx pbts --no-comments -o ${tsFiles[i]} ${jsFiles[i]}`)
-    }
-
-    fs.writeFileSync('./.proto_cache', JSON.stringify(protoCache));
+    // fs.writeFileSync('./.proto_cache', JSON.stringify(protoCache));
 });
 
 gulp.task('scripts_src', /*['svn_update_server'],*/ () => {

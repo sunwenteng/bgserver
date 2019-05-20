@@ -60,6 +60,11 @@ export class GameSession extends UserSession {
             this.rpcList.deleteNode(t);
             cur = cur.next;
 
+            if (!rpc.controller || !rpc.action) {
+                Log.sWarn(`rpc invalid, msgId=${rpc.reqMsgId}`);
+                continue;
+            }
+
             await this.doAction(rpc.controller, rpc.action, this, rpc.msg, rpc.resMsgId, rpc.resEncoder).catch((e) => {
                 Log.sError(e);
             });

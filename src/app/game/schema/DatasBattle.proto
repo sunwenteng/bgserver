@@ -1,0 +1,168 @@
+syntax = "proto3";
+
+package Hit;
+
+enum EBATTLE_WEATHER{
+    EBW_CLEAR_SKIES = 0;
+    EBW_HARSH_SUNLIGHT = 1;
+    EBW_RAIN = 2;
+    EBW_SANDSTORM = 3;
+    EBW_HAIL = 4;
+    EBW_FOG = 5;
+    EBW_MYSTERIOUS_AIR_CURRENT = 6;
+}
+
+message STC_BATTLE_INPUT{
+    repeated STC_BATTLE_INPUT_TEAM   teams = 1;
+    uint32   fieldCnt = 2;
+    EBATTLE_WEATHER   weather = 3;
+}
+
+message STC_BATTLE_INPUT_TEAM{
+    uint32   ver = 1;
+    string   name = 2;
+    repeated STC_BATTLE_INPUT_POKE   pokes = 3;
+}
+
+message STC_BATTLE_INPUT_POKE{
+    uint32   ver = 1;
+    uint32   pokeId = 2;
+    int32   lv = 3;
+    repeated int32   ivs = 4;
+    int32   nature = 5;
+    int32   alv = 6;
+    uint32   nonVolatileStatus = 7;
+    uint32   nvsLastingRounds = 8;
+    repeated STC_BATTLE_INPUT_MOVE   moves = 9;
+    repeated STC_BATTLE_INPUT_ABILITY   abilities = 10;
+    uint32   userData = 11;
+}
+
+message STC_BATTLE_INPUT_MOVE{
+    uint32   id = 1;
+}
+
+message STC_BATTLE_INPUT_ABILITY{
+    uint32   id = 1;
+}
+
+message STC_BATTLE_RESULT{
+    uint32   ver = 1;
+    uint32   battleType = 2;
+    uint32   mapId = 3;
+    uint32   fieldCnt = 4;
+    EBATTLE_WEATHER   weather = 5;
+    repeated STC_BATTLE_TEAM   teams = 6;
+    uint32   result = 7;
+    uint32   star = 8;
+    STC_BATTLE_REPORT   report = 79;
+    string   err = 10;
+}
+
+message STC_BATTLE_TEAM{
+    string   name = 1;
+    repeated STC_BATTLE_POKE   pokes = 2;
+}
+
+message STC_BATTLE_REPORT{
+    repeated STC_BATTLE_ROUND   rounds = 1;
+}
+
+message STC_BATTLE_POKE{
+    uint32   uid = 1;
+    uint32   pokeId = 2;
+    int32   maxHp = 3;
+    int32   initHp = 4;
+    uint32   lv = 5;
+    uint32   alv = 6;
+    uint32   nonVolatileStatus = 7;
+}
+
+message STC_BATTLE_MOVE{
+    uint32   uid = 1;
+    uint32   moveId = 2;
+    repeated STC_BATTLE_TARGET   targets = 3;
+}
+
+message STC_BATTLE_ROUND{
+    uint32   round = 1;
+    repeated STC_BATTLE_ACTION   acts = 2;
+}
+
+enum EBATTLE_TYPE_EFFECTIVE{
+    EBTE_VERY_EFFECTIVE = 0;
+    EBTE_NORMAL = 1;
+    EBTE_NOT_EFFECTIVE = 2;
+    EBTE_NO_EFFECT = 3;
+}
+
+message STC_BATTLE_TARGET{
+    uint32   uid = 1;
+    uint32   statId = 2;
+    int32   value = 3;
+    EBATTLE_TYPE_EFFECTIVE   effective = 4;
+}
+
+message STC_BATTLE_SWITCH_POKE{
+    uint32   uid = 1;
+    uint32   teamIdx = 2;
+    uint32   pos = 3;
+}
+
+message STC_BATTLE_POKE_DEAD{
+    uint32   uid = 1;
+}
+
+enum EBATTLE_STATUS_ACTION{
+    EBSA_ADD = 0;
+    EBSA_REMOVE = 1;
+    EBSA_DMG = 2;
+    EBSA_NO_MOVE = 3;
+}
+
+enum EBATTLE_STATUS_TYPE{
+    EBST_NONE = 0;
+    EBST_BURN = 1;
+    EBST_FREEZE = 2;
+    EBST_PARALYSIS = 3;
+    EBST_POISON = 4;
+    EBST_BADLY_POISONED = 5;
+    EBST_SLEEP = 6;
+}
+
+message STC_BATTLE_STATUS{
+    uint32   uid = 1;
+    EBATTLE_STATUS_TYPE   t = 2;
+    EBATTLE_STATUS_ACTION   act = 3;
+    repeated int32   intParams = 4;
+}
+
+enum EBATTLE_WEATHER_ACTION{
+    EBWA_CHANGE = 0;
+    EBWA_DMG = 1;
+}
+
+message STC_BATTLE_WEATHER{
+    uint32   uid = 1;
+    EBATTLE_WEATHER   weather = 2;
+    EBATTLE_WEATHER_ACTION   act = 3;
+    repeated int32   intParams = 4;
+}
+
+enum EBATTLE_ACT_TYPE{
+    EBAT_SWITCH = 0;
+    EBAT_MOVE = 1;
+    EBAT_DEAD = 2;
+    EBAT_STATUS = 3;
+    EBAT_WEATHER = 4;
+}
+
+message STC_BATTLE_ACTION{
+    EBATTLE_ACT_TYPE   type = 1;
+    STC_BATTLE_SWITCH_POKE   switch = 2;
+    STC_BATTLE_MOVE   move = 3;
+    STC_BATTLE_POKE_DEAD   dead = 4;
+    STC_BATTLE_STATUS   status = 5;
+    STC_BATTLE_WEATHER   weather = 6;
+}
+

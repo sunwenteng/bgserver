@@ -49,7 +49,7 @@ export function BGAction(eCheckType: EActionCheckType = EActionCheckType.needAut
             let returnValue = null, resMsgId = args[2], resMsgEncoder = args[3];
             if (eCheckType === EActionCheckType.noCheck) {
                 returnValue = await originalMethod.apply(Container.get(target.constructor.name), args);
-                args[0].sendProtocol(resMsgId, resMsgEncoder, returnValue);
+                // args[0].sendProtocol(resMsgId, resMsgEncoder, returnValue);
             }
             else if (eCheckType === EActionCheckType.authedThenInvalid && args[0].isAuthorized) {
                 Log.sWarn('already authorized, duplicate packet, roleId=%d, socketUid=%d', args[0].role.uid, args[0].socket.uid);

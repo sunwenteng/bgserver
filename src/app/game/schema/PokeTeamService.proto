@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package Hit;
+
+message CR_ADD_TO_TEAM{
+    int32   pokeUid = 1;
+    int32   posIdx = 2;
+}
+
+message RC_ADD_TO_TEAM_RESULT{
+    int32   errCode = 1;
+}
+
+message AdventureTeam{
+    repeated AdventureTeamMember   members = 1;
+}
+
+message AdventureTeamMember{
+    int32   uid = 1;
+}
+

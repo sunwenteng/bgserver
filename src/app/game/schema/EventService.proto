@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package Hit;
+
+message BattleSeason{
+    int32   evtId = 1;
+    int32   state = 2;
+    uint32   startTime = 3;
+    uint32   endTime = 4;
+    int32   itemId = 6;
+}
+

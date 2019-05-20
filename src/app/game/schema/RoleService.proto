@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package Hit;
+
+message RoleModel{
+    string   name = 1;
+    int32   lv = 2;
+    int32   exp = 3;
+    int32   nextLvExpCost = 4;
+}
+
+message CR_CHANGE_NAME{
+    string   name = 1;
+}
+
+message RC_CHANGE_NAME_RESULT{
+    int32   errCode = 1;
+}
+
+message RC_RAND_NAME_RESULT{
+    string   name = 1;
+}
+

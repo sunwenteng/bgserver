@@ -92,6 +92,7 @@ export const MSG_ID_SESSION_INIT_COMPLETE = 2;
 export const MSG_ID_SESSION_CLOSE = 3;
 export const MSG_ID_ACK_MSG = 4; // 确认已经收到包
 export const MSG_ID_HEART_BEAT = 5;
+export const MSG_SYS_DEFAULT_RANGE = 1000;
 
 export const SESSION_CLOSE_REASON_RECV_SESSION_CLOSE = 0;
 export const SESSION_CLOSE_REASON_APPLICATION_CLOSE = 1;

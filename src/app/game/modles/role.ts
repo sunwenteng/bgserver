@@ -164,12 +164,14 @@ export class Role extends RoleModel {
 
     public sendFull(bDebug: boolean = false) {
         let buffer = new ByteBuffer();
+        buffer.LE(true);
         this.encodeFull(buffer);
         Log.uDebug(this.uid, 'byte len=%d', buffer.offset);
     }
 
     public sendDelta(bDebug: boolean = false) {
         let buffer = new ByteBuffer();
+        buffer.LE(true);
         this.encodeDelta(buffer);
         Log.uDebug(this.uid, 'byte len=%d', buffer.offset);
     }

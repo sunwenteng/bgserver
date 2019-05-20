@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package Hit;
+
+message CombatPointRank{
+    string   roleId = 1;
+    int32   score = 2;
+    string   name = 3;
+}
+
+message AdventureRank{
+    string   roleId = 1;
+    int32   score = 2;
+    string   name = 3;
+}
+
+message CombatPointRankList{
+    repeated CombatPointRank   ranks = 1;
+}
+
+message AdventureRankList{
+    repeated AdventureRank   ranks = 1;
+}
+

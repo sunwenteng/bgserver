@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package Hit;
+
+message PokeList{
+    repeated PokeInfo   pokes = 1;
+}
+
+message PokeInfo{
+    int32   uid = 1;
+    int32   id = 2;
+    int32   lv = 3;
+    int32   adv = 4;
+    int32   alv = 5;
+    int32   ivs_hp = 6;
+    int32   ivs_atk = 7;
+    int32   ivs_def = 8;
+    int32   ivs_spa = 9;
+    int32   ivs_spd = 10;
+    int32   ivs_speed = 11;
+    int32   ivs_accu = 12;
+    int32   ivs_evasion = 13;
+    int32   nature = 14;
+    int32   ability = 15;
+    repeated int32   moves = 16;
+}
+
+message CR_POKE_LV_UP{
+    int32   pokeUid = 1;
+}
+
+message RC_POKE_LV_UP_RESULT{
+    int32   errCode = 1;
+}
+
+message CR_POKE_ADV{
+    int32   pokeUid = 1;
+}
+
+message RC_POKE_ADV_RESULT{
+    int32   errCode = 1;
+}
+
