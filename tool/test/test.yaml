@@ -1,0 +1,26 @@
+ns: Hit
+name: BagContorller
+datas:
+  ns: Hit
+  msgs:
+    - name: ItemBagEntry
+      members:
+        - [int32, uid, 1]
+        - [int32, id, 2]
+        - [int32, cnt, 3]
+    - name: ItemModel
+      members:
+        - [ItemBagEntry, items, 1, repeated]
+        - [int32, gold, 2]
+        - [int32, diamond, 3]
+    - name: CR_USE_ITEM
+      members:
+        - [int32, itemUid, 1]
+    - name: RC_USE_ITEM_RESULT
+      members:
+        - [int32, errCode, 1]
+properties:
+  ItemModel
+requests:
+  - name: requestUseItem
+    msgs: [None, None]

@@ -32,27 +32,58 @@ function splitByCapital(str) {
 gulp.task('proto2js', async () => {
     const protoDirs = [/*path.resolve('./src/app/proto'), */path.resolve('./src/app/game/schema')];
     let protoFiles = [];
-    let protoCache = {};
-    // if (fs.existsSync('./.proto_cache')) {
-    //     protoCache = JSON.parse(fs.readFileSync('./.proto_cache').toString());
-    // }
     for (let protoDir of protoDirs) {
         const files = fs.readdirSync(protoDir);
         for (let file of files) {
             if (file.search(/^.*?\.(proto)$/) !== -1) {
                 let protoFilePath = path.join(protoDir, file);
-                let newMd5 = md5(fs.readFileSync(protoFilePath));
-                if (newMd5 === protoCache[protoFilePath]) {
-                    continue;
-                }
-                protoCache[protoFilePath] = newMd5;
                 protoFiles.push(protoFilePath);
+            }
+            else if (file.search(/^.*?\.(ts)$/) !== -1 && file.indexOf('cmd') === -1) {
                 let nameArray = file.split('.');
                 // auto generate controller file if needed
+                let filePrefix = splitByCapital(nameArray[0])[0];
+
                 let controllerFileName = path.resolve(protoDir, '../controllers/' + splitByCapital(nameArray[0]).join('_') + '.ts');
-                if (!fs.existsSync(controllerFileName)) {
-                    fs.writeFileSync(controllerFileName, `export class ${nameArray[0]} {}`);
-                    console.log(`controller ${nameArray[0]} not exist, then auto create`);
+                let tsFilePath = path.join(protoDir, file);
+                let tsFileContent = fs.readFileSync(tsFilePath).toString();
+                let tsFileLines = tsFileContent.split('\n');
+                let ctl = '', isDirty = false;
+                for (let i = 0; i < tsFileLines.length; i++) {
+                    const line = tsFileLines[i];
+                    if (line.indexOf('action: ') !== -1) {
+                        let actionName = line.split("'")[1];
+                        if (ctl === '') {
+                            if (!fs.existsSync(controllerFileName)) {
+                                fs.writeFileSync(controllerFileName, `import {BGAction} from "../../../lib/util/descriptor";
+import {JsonController} from "routing-controllers";
+import {Role} from "../modles/role";
+import {Hit} from "../schema/cmd";
+
+@JsonController('/${filePrefix}')
+export class ${nameArray[0]} {
+}`);
+                                console.log(`controller ${nameArray[0]} not exist, then auto create`);
+                            }
+                            ctl = fs.readFileSync(controllerFileName).toString();
+                        }
+                        if (ctl.indexOf(actionName) === -1) {
+                            console.log(`controller ${nameArray[0]} action ${actionName} not exist, then auto create`);
+                            let reqEncoder = tsFileLines[i - 4].substring(tsFileLines[i - 4].indexOf(': ') + 2, tsFileLines[i - 4].length - 1);
+                            let resEncoder = tsFileLines[i - 2].substring(tsFileLines[i - 2].indexOf(': ') + 2, tsFileLines[i - 2].length - 1);
+                            ctl = ctl.slice(0, ctl.length - 1) + `
+    @BGAction()
+    ${actionName}(role: Role${reqEncoder !== 'undefined' ? ', msg: ' + reqEncoder : ''}): ${resEncoder === 'undefined' ? 'void' : resEncoder} {
+        // TODO
+        ${resEncoder === 'undefined' ? '' : `return ${resEncoder}.create();`}
+    }
+}`;
+                            isDirty = true;
+                        }
+                    }
+                }
+                if (isDirty) {
+                    fs.writeFileSync(controllerFileName, ctl);
                 }
             }
         }
@@ -61,8 +92,6 @@ gulp.task('proto2js', async () => {
         const tsFile = path.join(protoDir, './cmd.d.ts');
         await execP(`npx pbjs -t static-module -w commonjs -o ${jsFile} ${protoFiles.join(' ')} && npx pbts --no-comments -o ${tsFile} ${jsFile}`)
     }
-
-    // fs.writeFileSync('./.proto_cache', JSON.stringify(protoCache));
 });
 
 gulp.task('scripts_src', /*['svn_update_server'],*/ () => {
