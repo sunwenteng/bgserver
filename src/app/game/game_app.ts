@@ -14,7 +14,7 @@ async function main() {
     commander.version('0.0.1')
         .option('-d, --development', 'similar to set NODE_ENV=development', () => process.env.NODE_ENV = 'development')
         .option('-p, --production', 'similar to set NODE_ENV=production', () => process.env.NODE_ENV = 'production')
-        .option('-c, --config <path>', 'set config path', path => Global.setConfig(path, true))
+        .option('-c, --config [path]', 'set config path', path => Global.setConfig(path, true))
         .parse(process.argv);
     Global.setConfig(__dirname + '/../../config/config.development.json', false);
 

@@ -274,6 +274,10 @@ export class Role extends RoleModel {
             // todo
             this.timeDaily = now;
         }
+
+        if (bSendProtocol) {
+            this.sendDelta();
+        }
     }
 
     refreshWeekly() {

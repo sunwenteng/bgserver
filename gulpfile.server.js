@@ -219,61 +219,61 @@ gulp.task('deploy_dev', gulp.series('archive_linux', (cb) => {
     }
 }));
 
-gulp.task('proto_server', gulp.series('proto2js', (cb) => {
-    function capitalize(str) {
-        return str.toLowerCase().replace(/( |^)[a-z]/g, (L) => L.toUpperCase());
-    }
-
-    let {C2S} = require("./src/app/proto/cmd");
-    let fileContents = {}, dirtyFiles = [], excludeMethod = ['CS_ROLE_ONLINE', 'CS_ROLE_CREATE'],
-        controllers = Object.keys(C2S.Message.prototype);
-    for (let c of controllers) {
-        if (c.indexOf('LOGIN_') !== -1 || c.indexOf('CS_') === -1) {
-            continue;
-        }
-
-        if (excludeMethod.includes(c)) {
-            continue;
-        }
-
-        let arr = c.split('_');
-        if (arr.length > 2) {
-            let controllerPath = path.join('src', 'app', 'game', 'controllers', arr[1].toLowerCase() + '_controller.ts');
-            if (!fs.existsSync(controllerPath)) {
-                console.warn('cmd=' + c + ', controller=' + arr[1].toLowerCase() + '_controller not exists');
-            }
-            else {
-                for (let i = 0; i < arr.length; ++i) {
-                    if (i > 2) {
-                        arr[i] = capitalize(arr[i]);
-                    }
-                    else {
-                        arr[i] = arr[i].toLowerCase();
-                    }
-                }
-                let contents = fileContents[controllerPath];
-                if (!contents) {
-                    contents = fs.readFileSync(controllerPath).toString();
-                    fileContents[controllerPath] = contents;
-                }
-                let methodName = arr.slice(2, arr.length).join('');
-                let line = `${methodName}(role: Role, msg: C2S.${c}) {`;
-                if (contents.indexOf(line) === -1) {
-                    console.log(c);
-                    dirtyFiles.push(controllerPath);
-                    fileContents[controllerPath] = contents.substring(0, contents.length - 1) + `
-    @action()
-    async ${line}
-        // TODO
-        role.sendProtocol(S2C.${c.replace('CS_', 'SC_')}.create(), true);
-    }
-}`;
-                }
-            }
-        }
-    }
-    for (let file of dirtyFiles) {
-        fs.writeFileSync(file, fileContents[file]);
-    }
-    cb();
-}));
+// gulp.task('proto_server', gulp.series('proto2js', (cb) => {
+//     function capitalize(str) {
+//         return str.toLowerCase().replace(/( |^)[a-z]/g, (L) => L.toUpperCase());
+//     }
+//
+//     let {C2S} = require("./src/app/proto/cmd");
+//     let fileContents = {}, dirtyFiles = [], excludeMethod = ['CS_ROLE_ONLINE', 'CS_ROLE_CREATE'],
+//         controllers = Object.keys(C2S.Message.prototype);
+//     for (let c of controllers) {
+//         if (c.indexOf('LOGIN_') !== -1 || c.indexOf('CS_') === -1) {
+//             continue;
+//         }
+//
+//         if (excludeMethod.includes(c)) {
+//             continue;
+//         }
+//
+//         let arr = c.split('_');
+//         if (arr.length > 2) {
+//             let controllerPath = path.join('src', 'app', 'game', 'controllers', arr[1].toLowerCase() + '_controller.ts');
+//             if (!fs.existsSync(controllerPath)) {
+//                 console.warn('cmd=' + c + ', controller=' + arr[1].toLowerCase() + '_controller not exists');
+//             }
+//             else {
+//                 for (let i = 0; i < arr.length; ++i) {
+//                     if (i > 2) {
+//                         arr[i] = capitalize(arr[i]);
+//                     }
+//                     else {
+//                         arr[i] = arr[i].toLowerCase();
+//                     }
+//                 }
+//                 let contents = fileContents[controllerPath];
+//                 if (!contents) {
+//                     contents = fs.readFileSync(controllerPath).toString();
+//                     fileContents[controllerPath] = contents;
+//                 }
+//                 let methodName = arr.slice(2, arr.length).join('');
+//                 let line = `${methodName}(role: Role, msg: C2S.${c}) {`;
+//                 if (contents.indexOf(line) === -1) {
+//                     console.log(c);
+//                     dirtyFiles.push(controllerPath);
+//                     fileContents[controllerPath] = contents.substring(0, contents.length - 1) + `
+//     @action()
+//     async ${line}
+//         // TODO
+//         role.sendProtocol(S2C.${c.replace('CS_', 'SC_')}.create(), true);
+//     }
+// }`;
+//                 }
+//             }
+//         }
+//     }
+//     for (let file of dirtyFiles) {
+//         fs.writeFileSync(file, fileContents[file]);
+//     }
+//     cb();
+// }));
