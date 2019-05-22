@@ -26,7 +26,7 @@ export const rpcMetas: IRpcMeta[] = [
 ];
 
 export class GetItemMsgList extends BGObject {
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) mails: BGArray<GetItemMsg> = new BGArray(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) mails: BGArray<GetItemMsg> = new BGArray(this, GetItemMsg);
 }
     
 

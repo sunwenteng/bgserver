@@ -36,7 +36,7 @@ describe('bg_util', () => {
         @BGField(EBGValueType.uint32) uid: number = 0;
         @BGField(EBGValueType.string) name: string = '';
         @BGField(EBGValueType.boolean) valid: boolean = true;
-        @BGField(EBGValueType.object) timeMap: BGMap<TestInner> = new BGMap(this, TestInner);
+        @BGField(EBGValueType.object) timeMap: BGMap<TestInner> = new BGMap(this, EBGValueType.uint32, TestInner);
     }
 
     it('1', () => {
@@ -57,7 +57,7 @@ describe('bg_util', () => {
         role.clearDirty();
         expect(role.dirtyFields().length).eq(0);
 
-        role.timeMap = new BGMap(role, TestInner, {0: new TestInner(0, 0)});
+        role.timeMap = new BGMap(role, EBGValueType.uint32, TestInner, {0: new TestInner(0, 0)});
         role.timeMap.set(1, new TestInner(1, 1));
         role.timeMap.set(1, new TestInner(1, 2));
         role.timeMap.set(2, new TestInner(2, 2));

@@ -127,18 +127,18 @@ export async function start(config: MysqlConfig): Promise<void> {
 
         "player_info": "CREATE TABLE IF NOT EXISTS player_info (" +
         "role_id		INT			UNSIGNED	NOT NULL," +
-        "name			VARCHAR(32)	CHARACTER SET utf8 NOT NULL," +
-        "gm_auth		TINYINT		UNSIGNED	NOT NULL," +
-        "status			TINYINT		UNSIGNED	NOT NULL," +
-        "progress		BIGINT(20)	UNSIGNED	NOT NULL," +
-        "level			INT			UNSIGNED	NOT NULL," +
-        "gold			BIGINT(20)	UNSIGNED	NOT NULL," +
-        "diamond		INT			UNSIGNED	NOT NULL," +
-        "vip_level		INT			UNSIGNED	NOT NULL," +
-        "vip_exp		INT			UNSIGNED	NOT NULL," +
-        "diamond_paid	INT			UNSIGNED	NOT NULL," +
-        "last_login_time	INT		UNSIGNED	NOT NULL," +
-        "cur_stage  	INT		UNSIGNED	NOT NULL," +
+        "name			VARCHAR(32)	CHARACTER SET utf8 NOT NULL DEFAULT ''," +
+        "gm_auth		TINYINT		UNSIGNED	NOT NULL DEFAULT 0," +
+        "status			TINYINT		UNSIGNED	NOT NULL DEFAULT 0," +
+        "progress		BIGINT(20)	UNSIGNED	NOT NULL DEFAULT 0," +
+        "level			INT			UNSIGNED	NOT NULL DEFAULT 0," +
+        "gold			BIGINT(20)	UNSIGNED	NOT NULL DEFAULT 0," +
+        "diamond		INT			UNSIGNED	NOT NULL DEFAULT 0," +
+        "vip_level		INT			UNSIGNED	NOT NULL DEFAULT 0," +
+        "vip_exp		INT			UNSIGNED	NOT NULL DEFAULT 0," +
+        "diamond_paid	INT			UNSIGNED	NOT NULL DEFAULT 0," +
+        "last_login_time    INT		UNSIGNED	NOT NULL DEFAULT 0," +
+        "cur_stage  	INT		    UNSIGNED	NOT NULL DEFAULT 0," +
         "PRIMARY KEY (role_id)" +
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8;",
 
@@ -416,19 +416,6 @@ export async function start(config: MysqlConfig): Promise<void> {
         // example: ['gameserver_info', 'test', 'smallint null']
         // add new update column here
         ['re_passport_player', 'server_id_origin', 'INT UNSIGNED NOT NULL'],
-        ['player_info', 'cur_stage', 'INT UNSIGNED NOT NULL'],
-
-        ['player_info', 'cur_train', 'INT UNSIGNED NOT NULL'],
-        ['player_info', 'energy', 'INT UNSIGNED NOT NULL'],
-        ['player_info', 'stamina', 'INT UNSIGNED NOT NULL'],
-        ['player_info', 'rice', 'BIGINT(20) UNSIGNED NOT NULL'],
-        ['player_info', 'army', 'BIGINT(20) UNSIGNED NOT NULL'],
-
-        ['player_info', 'str', 'BIGINT(20) UNSIGNED NOT NULL'],
-        ['player_info', 'brain', 'BIGINT(20) UNSIGNED NOT NULL'],
-        ['player_info', 'politics', 'BIGINT(20) UNSIGNED NOT NULL'],
-        ['player_info', 'prestige', 'BIGINT(20) UNSIGNED NOT NULL'],
-        ['player_info', 'quest', 'INT UNSIGNED NOT NULL'],
 
         ['charge_info', 'diamond_pay', 'int(10) unsigned NOT NULL DEFAULT 0'],
 
@@ -441,7 +428,8 @@ export async function start(config: MysqlConfig): Promise<void> {
 
         ['passport_info', "open_udid", "VARCHAR(128) CHARACTER SET utf8 NOT NULL DEFAULT ''"],
 
-        ['player_info', 'create_time', "INT UNSIGNED NOT NULL"],
+        ['player_info', 'create_time', "INT UNSIGNED NOT NULL DEFAULT 0"],
+        ['player_info', 'cur_train', "INT UNSIGNED NOT NULL DEFAULT 0"],
 
         ['login_strategy', 'is_not', "tinyint(3) unsigned not null default 0"],
         ['login_strategy', 'remark', "varchar(100)  CHARACTER SET utf8 NOT NULL DEFAULT ''"],

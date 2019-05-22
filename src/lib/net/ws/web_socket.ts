@@ -18,7 +18,8 @@ import {parseHttpParams} from "../../util/game_util";
 import {Container} from "typedi";
 
 let uid: number = 0;
-const baseWebSocketPath = '/websocket';
+// const baseWebSocketPath = '/websocket';
+const baseWebSocketPath = '/';
 
 export enum SocketStatus {
     VALID,

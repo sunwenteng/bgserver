@@ -34,7 +34,7 @@ export const rpcMetas: IRpcMeta[] = [
 ];
 
 export class PokeList extends BGObject {
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) pokes: BGArray<PokeInfo> = new BGArray(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) pokes: BGArray<PokeInfo> = new BGArray(this, PokeInfo);
 }
     
 

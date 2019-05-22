@@ -26,7 +26,7 @@ export const rpcMetas: IRpcMeta[] = [
 ];
 
 export class ShopList extends BGObject {
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) items: BGArray<ShopListItem> = new BGArray(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) items: BGArray<ShopListItem> = new BGArray(this, ShopListItem);
 }
     
 

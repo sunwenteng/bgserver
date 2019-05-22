@@ -14,6 +14,8 @@ import * as LoginDB from '../../../lib/mysql/login_db';
 import {ERROR_CODE} from "../../../lib/util/error_code";
 import {gameNow} from "../../../lib/util/time";
 import {EActionCheckType, MSG_ID_SESSION_INIT, MSG_ID_SESSION_INIT_COMPLETE} from "../modles/defines";
+import {MsgIdItemBag} from "../schema_generated/BagService";
+import * as ByteBuffer from "bytebuffer";
 
 @JsonController('/role')
 export class RoleController {
@@ -39,7 +41,7 @@ export class RoleController {
                     let dbResult = await LoginDB.conn.execute('select server_id from passport_info as p, re_passport_player as r where r.passport_id = p.passport_id and r.role_id=' + roleId);
                     if (dbResult.length !== 1) {
                         Log.uError(role.uid, 'role %d get platform error', roleId);
-                        return;
+                        // return;
                     }
 
                     // while (true) {
@@ -51,16 +53,16 @@ export class RoleController {
                     //     name = RoleController.instance.randomName(gender);
                     // }
 
-                    role.serverId = dbResult[0].server_id;
+                    // role.serverId = dbResult[0].server_id;
 
-                    await WorldDB.conn.execute('insert into player_name set ?', {
-                        uid: role.uid,
-                        nickname: name,
-                        serverId: dbResult[0].server_id
-                    });
+                    // await WorldDB.conn.execute('insert into player_name set ?', {
+                    //     uid: role.uid,
+                    //     nickname: name,
+                    //     serverId: dbResult[0].server_id
+                    // });
 
                     role.session = session;
-                    await role.create(name);
+                    await role.create('robot' + role.uid);
                     await role.notify();
                     await role.save(true, true);
                 }
@@ -78,22 +80,22 @@ export class RoleController {
                 return;
             }
 
-            let platformId = 0, serverId = 0;
-            let dbResult = await LoginDB.conn.execute('select platform, server_id from passport_info as p, re_passport_player as r where r.passport_id = p.passport_id and r.role_id=' + roleId);
-            if (dbResult.length !== 1) {
-                let testResult = await LoginDB.conn.execute('select passport_id, server_id from re_passport_player where role_id=' + roleId);
-                if (testResult.length === 0 || testResult[0].passport_id !== 0) {
-                    Log.uError(role.uid, 'role %d get platform error', roleId);
-                    return;
-                }
-                serverId = testResult[0].server_id;
-            }
-            else {
-                platformId = dbResult[0].platform;
-                serverId = dbResult[0].server_id;
-            }
-            role.platformId = platformId;
-            role.serverId = serverId;
+            // let platformId = 0, serverId = 0;
+            // let dbResult = await LoginDB.conn.execute('select platform, server_id from passport_info as p, re_passport_player as r where r.passport_id = p.passport_id and r.role_id=' + roleId);
+            // if (dbResult.length !== 1) {
+            //     let testResult = await LoginDB.conn.execute('select passport_id, server_id from re_passport_player where role_id=' + roleId);
+            //     if (testResult.length === 0 || testResult[0].passport_id !== 0) {
+            //         Log.uError(role.uid, 'role %d get platform error', roleId);
+            //         return;
+            //     }
+            //     serverId = testResult[0].server_id;
+            // }
+            // else {
+            //     platformId = dbResult[0].platform;
+            //     serverId = dbResult[0].server_id;
+            // }
+            // role.platformId = platformId;
+            // role.serverId = serverId;
 
             // role.loginDevice = pck.;
             // role.loginDeviceType = msg.deviceType;
@@ -115,14 +117,26 @@ export class RoleController {
             role.lastLoginTime = now;
             role.save().catch(e => Log.uError(role.uid, e));
 
+            role.session.sendProtocol(MSG_ID_SESSION_INIT, Zombie.Session_Init, Zombie.Session_Init.create({sId: role.session.socket.uid}));
             // send client packet
             if (pck.sId) {
                 role.session.sendAllAckMsg();
             }
             else {
                 role.sendFull();
+                // let buffer = new ByteBuffer();
+                // buffer.LE(true);
+                // role.itemBag.gold = 100;
+                // role.itemBag.bigNum1 = 1000;
+                // role.itemBag.bigNum2 = 2000;
+                // role.itemBag.encodeFull(buffer, 0);
+                // role.session.sendProtocol(MsgIdItemBag, Zombie.Data_Sync, Zombie.Data_Sync.create({
+                //     type: Zombie.Data_Sync_Type.E_DST_FULL,
+                //     data: buffer.buffer.slice(0, buffer.offset)
+                // }));
+                // role.itemBag.clearDirty();
+                // Log.sInfo(JSON.stringify(role.itemBag.toObject(true)));
             }
-            role.session.sendProtocol(MSG_ID_SESSION_INIT, Zombie.Session_Init, Zombie.Session_Init.create({sId: role.session.socket.uid}));
             role.session.sendProtocol(MSG_ID_SESSION_INIT_COMPLETE);
         });
     }

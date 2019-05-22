@@ -80,9 +80,11 @@ interface IField {
     dynamic?: boolean;
 }
 
-function encodeDefaultType(o: IField, buffer: ByteBuffer) {
-    // write default uid 0
-    buffer.writeUint32(o.uid);
+function encodeDefaultType(o: IField, buffer: ByteBuffer, bEncodeUid: boolean = true) {
+    if (bEncodeUid) {
+        // write default uid 0
+        buffer.writeUint16(o.uid);
+    }
     switch (o.type) {
         case EBGValueType.boolean:
             buffer.writeUint8(o.value ? 1 : 0);
@@ -207,9 +209,8 @@ export abstract class BGObject {
      */
     encodeFull(buffer: ByteBuffer, selfUid?: number) {
         if (selfUid !== undefined) {
-            buffer.writeUint32(selfUid);
+            buffer.writeUint16(selfUid);
         }
-        buffer.writeUint32(Object.keys(this.__fields).length);
         for (let k in this.__fields) {
             const o: IField = this.__fields[k];
             if (!o.dynamic) {
@@ -235,7 +236,7 @@ export abstract class BGObject {
             return;
         }
         if (selfUid !== undefined) {
-            buffer.writeUint32(selfUid);
+            buffer.writeUint16(selfUid);
         }
         let modBuffer = new ByteBuffer();
         modBuffer.LE(true);
@@ -328,11 +329,16 @@ export abstract class BGObject {
         if (!bAll && this.dirty === EDirtyType.EDT_OK) {
             return;
         }
-        let reply = this.toObject(bAll);
-        for (let k in reply) {
-            let o = reply[k];
-            if (typeof o === 'object') {
-                reply[k] = JSON.stringify(o);
+        let reply = {};
+        for (let k in this.__fields) {
+            let f = this.__fields[k];
+            if (f.dirty) {
+                if (f.value instanceof BGObject) {
+                    reply[k] = JSON.stringify(f.value.toObject(bAll));
+                }
+                else {
+                    reply[k] = f.value;
+                }
             }
         }
         return reply;
@@ -349,6 +355,7 @@ enum EDeltaOpt {
 export class BGMap<T extends BGObject | string | number> extends BGObject {
     private _data: { [key: string]: T } = {};
     private _valueT: EBGValueType = undefined;
+    private readonly _keyT: EBGValueType = EBGValueType.string;
     private readonly _typeT: (new () => T) = undefined;
     private _binlogCnt: number = 0;
     private _binlog: ByteBuffer = new ByteBuffer();
@@ -356,13 +363,18 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
 
     /**
      * @param parent
+     * @param keyType
      * @param type must be (new () => T), Function type is just for compile through
      * @param data
      */
-    constructor(parent: BGObject, type?: (new () => T) | Function, data ?: { [key: string]: T }) {
+    constructor(parent: BGObject, keyType?: EBGValueType, type?: (new () => T) | Function, data ?: { [key: string]: T }) {
         super(parent);
         if (type) {
             this._typeT = type as (new () => T);
+        }
+
+        if (keyType) {
+            this._keyT = keyType;
         }
 
         if (data) {
@@ -452,7 +464,7 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
             case EDeltaOpt.INSERT:
             case EDeltaOpt.UPDATE_FULL:
                 this._binlog.writeUint32(opt);
-                this._binlog.writeIString(k);
+                this.encodeKey(k, this._binlog);
                 break;
             default:
                 break;
@@ -474,14 +486,23 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
         this._binlogCnt = 0;
     }
 
+    encodeKey(k: string, buffer: ByteBuffer) {
+        encodeDefaultType({
+            value: this._keyT === EBGValueType.string ? k : parseInt(k),
+            type: this._keyT,
+            uid: 0,
+            dirty: EDirtyType.EDT_DIRTY_FULL
+        }, buffer, false);
+    }
+
     encodeFull(buffer: ByteBuffer, selfUid?: number) {
         if (selfUid !== undefined) {
-            buffer.writeUint32(selfUid);
+            buffer.writeUint16(selfUid);
         }
         buffer.writeUint32(this.length);
-        buffer.writeUint32(0);
         for (let k in this._data) {
             let o = this._data[k];
+            this.encodeKey(k, buffer);
             if (o instanceof BGObject) {
                 o.encodeFull(buffer, 0);
             }
@@ -499,7 +520,7 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
 
     encodeDelta(buffer: ByteBuffer, selfUid?: number) {
         if (selfUid !== undefined) {
-            buffer.writeUint32(selfUid);
+            buffer.writeUint16(selfUid);
         }
 
         if (this._valueT === EBGValueType.object) {
@@ -508,13 +529,13 @@ export class BGMap<T extends BGObject | string | number> extends BGObject {
                 if (value.dirty === EDirtyType.EDT_DIRTY_FULL) {
                     ++this._binlogCnt;
                     this._binlog.writeUint32(EDeltaOpt.UPDATE_FULL);
-                    this._binlog.writeIString(k);
+                    this.encodeKey(k, this._binlog);
                     value.encodeFull(this._binlog, 0);
                 }
                 else if (value.dirty === EDirtyType.EDT_DIRTY_MOD) {
                     ++this._binlogCnt;
                     this._binlog.writeUint32(EDeltaOpt.UPDATE_DELTA);
-                    this._binlog.writeIString(k);
+                    this.encodeKey(k, this._binlog);
                     value.encodeDelta(this._binlog, 0);
                 }
             }
@@ -706,10 +727,9 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
 
     encodeFull(buffer: ByteBuffer, selfUid?: number) {
         if (selfUid !== undefined) {
-            buffer.writeUint32(selfUid);
+            buffer.writeUint16(selfUid);
         }
         buffer.writeUint32(this.length);
-        buffer.writeUint32(0);
         for (let k in this._data) {
             let o = this._data[k];
             if (o instanceof BGObject) {
@@ -729,22 +749,22 @@ export class BGArray<T extends BGObject | string | number> extends BGObject {
 
     encodeDelta(buffer: ByteBuffer, selfUid?: number) {
         if (selfUid !== undefined) {
-            buffer.writeUint32(selfUid);
+            buffer.writeUint16(selfUid);
         }
 
         if (this._valueT === EBGValueType.object) {
-            for (let k in this._data) {
+            for (let k = 0; k < this._data.length; ++k) {
                 let value = this._data[k] as BGObject;
                 if (value.dirty === EDirtyType.EDT_DIRTY_FULL) {
                     ++this._binlogCnt;
                     this._binlog.writeUint32(EDeltaOpt.UPDATE_FULL);
-                    this._binlog.writeIString(k);
+                    this._binlog.writeUint32(k);
                     value.encodeFull(this._binlog, 0);
                 }
                 else if (value.dirty === EDirtyType.EDT_DIRTY_MOD) {
                     ++this._binlogCnt;
                     this._binlog.writeUint32(EDeltaOpt.UPDATE_DELTA);
-                    this._binlog.writeIString(k);
+                    this._binlog.writeUint32(k);
                     value.encodeDelta(this._binlog, 0);
                 }
             }

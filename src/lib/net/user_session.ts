@@ -129,7 +129,7 @@ export abstract class UserSession extends events.EventEmitter {
     public sendProtocol(msgId: number, msgEncoder?: any, msg?: any) {
         Log.sDebug('socketUid=%d send msgId=%d, %s=%j', this.socket ? this.socket.uid : 0, msgId, msg ? msg.constructor.name : 'None', msg ? msg : 'None');
         let buffer = this.encode(msgId, msgEncoder, msg);
-        if (msgEncoder && msg) {
+        if (msgId < MSG_SYS_DEFAULT_RANGE && msgEncoder && msg) {
             this._ackMsg.append([this._curMsgIdx, buffer]);
         }
         this.send(buffer);

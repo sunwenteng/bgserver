@@ -100,31 +100,31 @@ export function BGMysql(type: EMysqlValueType, len?: number) {
         let dbString = '';
         switch (type) {
             case EMysqlValueType.uint8:
-                dbString = `TINYINT UNSIGNED NOT NULL DEFAULT '0'`;
+                dbString = `TINYINT UNSIGNED NOT NULL DEFAULT 0`;
                 break;
             case EMysqlValueType.uint16:
-                dbString = `SMALLINT UNSIGNED NOT NULL DEFAULT '0'`;
+                dbString = `SMALLINT UNSIGNED NOT NULL DEFAULT 0`;
                 break;
             case EMysqlValueType.uint32:
-                dbString = `INT UNSIGNED NOT NULL DEFAULT '0'`;
+                dbString = `INT UNSIGNED NOT NULL DEFAULT 0`;
                 break;
             case EMysqlValueType.uint64:
-                dbString = `BIGINT(20) UNSIGNED NOT NULL DEFAULT '0'`;
+                dbString = `BIGINT(20) UNSIGNED NOT NULL DEFAULT 0`;
                 break;
             case EMysqlValueType.int8:
-                dbString = `TINYINT NOT NULL DEFAULT '0'`;
+                dbString = `TINYINT NOT NULL DEFAULT 0`;
                 break;
             case EMysqlValueType.int16:
-                dbString = `SMALLINT NOT NULL DEFAULT '0'`;
+                dbString = `SMALLINT NOT NULL DEFAULT 0`;
                 break;
             case EMysqlValueType.int32:
-                dbString = `INT NOT NULL DEFAULT '0'`;
+                dbString = `INT NOT NULL DEFAULT 0`;
                 break;
             case EMysqlValueType.int64:
-                dbString = `BIGINT(20) NOT NULL DEFAULT '0'`;
+                dbString = `BIGINT(20) NOT NULL DEFAULT 0`;
                 break;
             case EMysqlValueType.string:
-                dbString = `VARCHAR(${len ? len : 64}) CHARACTER SET utf8 NOT NULL DEFAULT ''`;
+                dbString = `VARCHAR(${len ? len : 256}) CHARACTER SET utf8 NOT NULL DEFAULT ''`;
                 break;
             case EMysqlValueType.blob:
                 dbString = `blob NULL`;

@@ -13,8 +13,9 @@ import {EMysqlValueType, ROLE_REDIS_EXPIRE_TIME} from "./defines";
 import {BGField, EBGValueType} from "../../../lib/util/bg_util";
 import {S2C} from "../../proto/s2c";
 import * as ByteBuffer from "bytebuffer";
-import {RoleModel} from "../schema_generated/RoleService";
+import {MsgIdRoleModel, RoleModel} from "../schema_generated/RoleService";
 import {ItemBag} from "../schema_generated/BagService";
+import {Zombie} from "../../proto/zombie";
 
 export const roleRedisPrefix: string = 'hash_role';
 const roleSummaryRedisKey: string = 'hash_role_summary';
@@ -50,6 +51,9 @@ export class Role extends RoleModel {
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) vipLv: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) vipExp: number = 0;
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) guildId: number = 0;
+    @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, false) gold: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) diamond: number = 0;
+    @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) guideId: number = 0;
 
     @BGMysql(EMysqlValueType.uint32) @BGField(EBGValueType.uint32, false) timeLastGm: number = 0;
     @BGMysql(EMysqlValueType.uint8) @BGField(EBGValueType.uint8, false) state: ERoleState = ERoleState.normal;
@@ -123,15 +127,27 @@ export class Role extends RoleModel {
                                 throw new Error('role column ' + f + ' not in db');
                             }
                         }
-                        this.decodeDB(result[0]);
-                        await RedisMgr.getInstance(RedisType.GAME).hmset(key, this.encodeDB(true), ROLE_REDIS_EXPIRE_TIME);
-                        resolve(true);
+                        try {
+                            this.decodeDB(result[0]);
+                            await RedisMgr.getInstance(RedisType.GAME).hmset(key, this.encodeDB(true), ROLE_REDIS_EXPIRE_TIME);
+                            resolve(true);
+                        }
+                        catch (e) {
+                            Log.uError(this.uid, e);
+                            resolve(false);
+                        }
                     }
                 }
                 // 缓存命中
                 else {
-                    this.decodeDB(reply);
-                    resolve(true);
+                    try {
+                        this.decodeDB(reply);
+                        resolve(true);
+                    }
+                    catch (e) {
+                        Log.uError(this.uid, e);
+                        resolve(false);
+                    }
                 }
             }
         });
@@ -169,18 +185,26 @@ export class Role extends RoleModel {
         }
     }
 
-    public sendFull(bDebug: boolean = false) {
+    public sendFull() {
         let buffer = new ByteBuffer();
         buffer.LE(true);
-        this.encodeFull(buffer);
-        Log.uDebug(this.uid, 'byte len=%d', buffer.offset);
+        this.encodeFull(buffer, 0);
+        // Log.uDebug(this.uid, 'byte len=%d', buffer.offset);
+        this.session.sendProtocol(MsgIdRoleModel, Zombie.Data_Sync, Zombie.Data_Sync.create({
+            type: Zombie.Data_Sync_Type.E_DST_FULL,
+            data: buffer.buffer.slice(0, buffer.offset)
+        }));
     }
 
-    public sendDelta(bDebug: boolean = false) {
+    public sendDelta() {
         let buffer = new ByteBuffer();
         buffer.LE(true);
-        this.encodeDelta(buffer);
-        Log.uDebug(this.uid, 'byte len=%d', buffer.offset);
+        this.encodeDelta(buffer, 0);
+        // Log.uDebug(this.uid, 'byte len=%d', buffer.offset);
+        this.session.sendProtocol(MsgIdRoleModel, Zombie.Data_Sync, Zombie.Data_Sync.create({
+            type: Zombie.Data_Sync_Type.E_DST_DELTA,
+            data: buffer.buffer.slice(0, buffer.offset)
+        }));
     }
 
     public async setAlive() {
@@ -321,13 +345,17 @@ export class Role extends RoleModel {
             name: this.name,
             gm_auth: this.gmAuth,
             status: this.state,
-            progress: this.exp,
+            progress: this.guideId,
             level: this.lv,
-            cur_train: 0,
+            gold: this.gold,
+            diamond: this.diamond,
             vip_level: this.vipLv,
             vip_exp: this.vipExp,
+            cur_train: 0,
+            cur_stage: 0,
+            diamond_paid: this.diamond,
             create_time: this.createTime,
-            last_login_time: this.lastLoginTime
+            last_login_time: this.lastLoginTime,
         };
         await LoginDB.conn.execute('insert into player_info set ? on duplicate key update ?', [data, data]);
     }

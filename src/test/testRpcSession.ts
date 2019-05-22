@@ -8,7 +8,8 @@ describe('rpc_session', () => {
     it('connect', async () => {
         return new Promise(async resolve => {
             Log.init('./log');
-            let host = '172.16.1.214', port = 8100;
+            // let host = '172.16.1.214', port = 8100;
+            let host = '172.16.1.83', port = 5555;
             let battle = new RpcSession(host, port, name, hashMd5, allRpc());
             await battle.init();
 

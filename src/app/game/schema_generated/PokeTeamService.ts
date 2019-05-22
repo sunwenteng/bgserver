@@ -26,7 +26,7 @@ export const rpcMetas: IRpcMeta[] = [
 ];
 
 export class AdventureTeam extends BGObject {
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) members: BGArray<AdventureTeamMember> = new BGArray(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) members: BGArray<AdventureTeamMember> = new BGArray(this, AdventureTeamMember);
 }
     
 

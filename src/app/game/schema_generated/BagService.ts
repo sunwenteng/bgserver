@@ -26,11 +26,11 @@ export const rpcMetas: IRpcMeta[] = [
 ];
 
 export class ItemBag extends BGObject {
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) items: BGArray<ItemBagEntry> = new BGArray(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) items: BGArray<ItemBagEntry> = new BGArray(this, ItemBagEntry);
     @BGMysql(EMysqlValueType.int32) @BGField(EBGValueType.int32, true) gold: number = 0;
     @BGMysql(EMysqlValueType.int32) @BGField(EBGValueType.int32, true) diamond: number = 0;
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) goods: BGMap<ItemBagEntry> = new BGMap(this);
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) bags: BGMap<BagRes> = new BGMap(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) goods: BGMap<ItemBagEntry> = new BGMap(this, EBGValueType.int32, ItemBagEntry);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) bags: BGMap<BagRes> = new BGMap(this, EBGValueType.string, BagRes);
     @BGMysql(EMysqlValueType.int64) @BGField(EBGValueType.int64, true) bigNum1: number = 0;
     @BGMysql(EMysqlValueType.uint64) @BGField(EBGValueType.uint64, true) bigNum2: number = 0;
 }

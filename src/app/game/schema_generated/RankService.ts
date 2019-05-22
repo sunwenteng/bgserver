@@ -15,7 +15,7 @@ export const rpcMetas: IRpcMeta[] = [
 ];
 
 export class CombatPointRankList extends BGObject {
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) ranks: BGArray<CombatPointRank> = new BGArray(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) ranks: BGArray<CombatPointRank> = new BGArray(this, CombatPointRank);
 }
     
 
@@ -29,7 +29,7 @@ export class CombatPointRank extends BGObject {
 export const MsgIdCombatPointRankList = 1020;
 
 export class AdventureRankList extends BGObject {
-    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) ranks: BGArray<AdventureRank> = new BGArray(this);
+    @BGMysql(EMysqlValueType.blob) @BGField(EBGValueType.object, true) ranks: BGArray<AdventureRank> = new BGArray(this, AdventureRank);
 }
     
 

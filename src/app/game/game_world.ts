@@ -10,12 +10,13 @@ import * as time from '../../lib/util/time';
 import {IntervalTimer, realNow} from '../../lib/util/time';
 import * as LoginDB from "../../lib/mysql/login_db";
 import * as WorldDB from "../../lib/mysql/world_db";
-import {BMap, GlobalKeyType, GM_RES_RELOAD_FLAG} from "./modles/defines";
+import {BMap, GlobalKeyType, GM_RES_RELOAD_FLAG, MSG_ID_SESSION_CLOSE} from "./modles/defines";
 import {GameSession} from "./game_session";
 import {ConfigMgr} from "../../config/data/config_struct";
 import {Global} from "../../lib/util/global";
 import {BGObject} from "../../lib/util/bg_util";
 import {S2C} from "../proto/s2c";
+import {Zombie} from "../proto/zombie";
 
 export enum WorldDataRedisKey {
     GAME_SERVERS = 'hash_game_servers',
@@ -181,7 +182,7 @@ export class GameWorld extends events.EventEmitter {
                 switch (message) {
                     case EWorldMsg.KICK: {
                         Log.sInfo('role %d online, then kick', roleId);
-                        session.role.sendProtocol(S2C.SC_ROLE_OFFLINE.create({type: EOfflineReason.KICK}));
+                        session.sendProtocol(MSG_ID_SESSION_CLOSE, Zombie.Session_Close, Zombie.Session_Close.create({reason: EOfflineReason.KICK}));
                         session.closeSocket();
                         await session.offline();
                         break;
@@ -203,20 +204,23 @@ export class GameWorld extends events.EventEmitter {
         // half block mode, async session, sync packet within session
         let cur = this._sessionList.head, t = null, promises = [], now = realNow();
         while (cur) {
-            if ((now - cur.element.timeLastAlive) > 180) {
+            if ((now - cur.element.timeLastAlive) > 30) {
                 Log.sWarn('session not alive anymore then close, uid=' + cur.element.socket.uid);
                 cur.element.closeSocket();
+                t = cur;
+                this.delSession(t);
+                await cur.element.offline();
             }
-            if (cur.element.socket.isSocketValid()) {
+            else if (cur.element.socket.isSocketValid()) {
                 promises.push(cur.element.update());
-                cur = cur.next;
             }
-            else {
+            cur = cur.next;
+            /*else {
                 t = cur;
                 this.delSession(t);
                 await cur.element.offline();
                 cur = cur.next;
-            }
+            }*/
         }
         await Promise.all(promises);
 

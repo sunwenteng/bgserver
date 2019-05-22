@@ -9,8 +9,8 @@ import * as LoginDB from '../../lib/mysql/login_db';
 import {IRpc, IRpcDefinition, MSG_ID_SESSION_INIT, MSG_ID_SESSION_INIT_COMPLETE,} from "./modles/defines";
 import {Zombie} from "../proto/zombie";
 import {RoleController} from "./controllers/role_controller";
-import {Container} from "typedi";
 import {allRpc} from "./schema_generated/SRole";
+import {getBean} from "../../lib/util/context";
 
 const MAX_PACKET_COUNT = 10000;
 
@@ -32,8 +32,8 @@ export class GameSession extends UserSession {
             reqEncoder: Zombie.Session_Init,
             resMsgId: MSG_ID_SESSION_INIT_COMPLETE,
             resEncoder: Zombie.Session_Init,
-            controller: Container.get(RoleController.name),
-            action: Container.get(RoleController.name)['online']
+            controller: getBean(RoleController),
+            action: getBean(RoleController)['online']
         };
     }
 

@@ -1,4 +1,3 @@
-import {UserSession} from '../../lib/net/user_session';
 import {LinkedList, ListNode} from '../../lib/util/linked_list';
 import {Log} from "../../lib/util/log";
 import * as LoginDB from "../../lib/mysql/login_db";
