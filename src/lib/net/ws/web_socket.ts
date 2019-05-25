@@ -1,6 +1,8 @@
 import "reflect-metadata";
 import * as ws from 'ws';
 import * as express from 'express';
+import * as session from 'express-session';
+import * as cookieParser from 'cookie-parser';
 import * as http from 'http';
 import {Log} from '../../util/log';
 import {UserSession} from '../user_session';
@@ -109,7 +111,7 @@ class LoggingMiddleware implements ExpressMiddlewareInterface {
 @Interceptor()
 class LoggingInterceptor implements InterceptorInterface {
     intercept(action: Action, content: any) {
-        Log.sInfo(`url=${action.request.originalUrl}, content=${content}`);
+        Log.sInfo(`url=${action.request.originalUrl}, content=${JSON.stringify(content)}`);
         return content;
     }
 
@@ -150,6 +152,12 @@ export class Server {
             let app = express();
             app.use("/*", bodyParser.text({type: "*/*"}));
             app.use(bodyParser.urlencoded({extended: true, limit: '1mb'}));
+            app.use(cookieParser('bgserver'));
+            app.use(session({
+                secret: 'bgserver',
+                resave: false,
+                saveUninitialized: true,
+            }));
             app.use((req: express.Request, res: express.Response, next) => {
                 res.header("Access-Control-Allow-Credentials", 'true');
                 res.header("Access-Control-Allow-Origin", "*");
