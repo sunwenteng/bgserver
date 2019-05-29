@@ -22,6 +22,10 @@ export interface IServer {
     lastLoginTime?: number;
 }
 
+export class CS_GET_SERVER_LIST {
+    public passportId: number;
+}
+
 export class SC_GET_SERVER_LIST {
     public servers: IServer[];
 }
@@ -39,6 +43,7 @@ export class SC_GET_INFO {
 
 export class CS_CHOOSE_SERVER {
     public serverId: number;
+    public passportId: number;
 }
 
 export class SC_CHOOSE_SERVER {

@@ -1,4 +1,4 @@
-import {Get, JsonController, Body, Req, Session, Post} from "routing-controllers";
+import {Body, Get, JsonController, Post, Req} from "routing-controllers";
 import * as uuid from 'uuid';
 import {LoginWorld} from "../login_world";
 import * as LoginDB from "../../../lib/mysql/login_db";
@@ -6,7 +6,7 @@ import {EServerState} from "../../../lib/mysql/login_db";
 import {Log} from "../../../lib/util/log";
 import {
     CS_CHOOSE_SERVER,
-    CS_GET_INFO,
+    CS_GET_INFO, CS_GET_SERVER_LIST,
     CS_LOGIN,
     IServer,
     SC_CHOOSE_SERVER,
@@ -15,6 +15,16 @@ import {
     SC_LOGIN
 } from "../dto/login";
 import {parseHttpParams} from "../../../lib/util/game_util";
+import {RedisMgr, RedisType} from "../../../lib/redis/redis_mgr";
+
+interface ILoginSession {
+    platformId?: number;
+    clientVersion?: string;
+    passportId?: number;
+    gmAuth?: number;
+    device?: string;
+    ip?: string;
+}
 
 @JsonController('/login')
 export class LoginController {
@@ -50,7 +60,11 @@ export class LoginController {
         return true;
     }
 
-    private isServerAccess(strategyId: number, session): boolean {
+    private getLoginSessionKey(passportId: number) {
+        return 'login_session_' + passportId;
+    }
+
+    private isServerAccess(strategyId: number, session: ILoginSession): boolean {
         if (!strategyId) {
             return true;
         }
@@ -110,90 +124,88 @@ export class LoginController {
     }
 
     @Post('/login')
-    public async handleLogin(@Body() packet: CS_LOGIN, @Session() session: Express.Session, @Req() req) {
-        return new Promise(async (resolve, reject) => {
-            let pck = new SC_LOGIN();
-            let sql = 'select passport_id, gm_auth, last_login_server from passport_info where ? and ? and ?',
-                lastLoginServer = 0;
-            let result = await LoginDB.conn.execute(sql, [{passport: packet.passport}, {platform: packet.platform}, {auth_type: 2}]);
+    public async handleLogin(@Body() packet: CS_LOGIN, @Req() req) {
+        let session: ILoginSession = {};
+        let pck = new SC_LOGIN();
+        let sql = 'select passport_id, gm_auth, last_login_server from passport_info where ? and ? and ?',
+            lastLoginServer = 0;
+        let result = await LoginDB.conn.execute(sql, [{passport: packet.passport}, {platform: packet.platform}, {auth_type: 2}]);
 
-            if (result.length === 0) {
-                let dbTime = await LoginDB.getDBTime();
-                let insertSql = "insert into passport_info set ?";
-                result = await LoginDB.conn.execute(insertSql, {
-                    passport: packet.passport,
-                    platform: packet.platform,
-                    auth_type: 2,
-                    pwd: '',
-                    mail: '',
-                    uid: packet.deviceUid,
-                    token: packet.deviceToken,
-                    create_time: dbTime,
-                    gm_auth: 0,
-                    reg_ip: parseHttpParams(req)['IP'],
-                    reg_device: packet.device,
-                    reg_device_type: packet.deviceType,
-                    last_login_time: dbTime,
-                    status: 0,
-                    last_login_server: 0
-                });
-                session.passportId = result['insertId'];
-                pck.isNew = 1;
-            }
-            else {
-                session.passportId = result[0]['passport_id'];
-                session.gmAuth = result[0]['gm_auth'];
-                lastLoginServer = result[0]['last_login_server'];
-                pck.isNew = 0;
-            }
-            session.device = packet.device;
+        let ip = parseHttpParams(req)['IP'];
 
-            if (!lastLoginServer) {
-                let maxServerId = 0;
-                for (let key in LoginWorld.instance.serverMap) {
-                    let server = LoginWorld.instance.serverMap[key];
-                    if (!server.can_login || !server.alive) {
-                        continue;
-                    }
-                    if (!this.isServerAccess(server.login_strategy_id, session)) {
-                        continue;
-                    }
-
-                    if (maxServerId < server.server_id) {
-                        maxServerId = server.server_id;
-                    }
-                }
-
-                if (maxServerId) {
-                    lastLoginServer = maxServerId;
-                    Log.sInfo('new passport, allocate server[' + lastLoginServer + ']');
-                    let sql = 'update passport_info set ? where ?';
-                    await LoginDB.conn.execute(sql, [{last_login_server: lastLoginServer}, {passport_id: session.passportId}]);
-                }
-            }
-            else {
-                Log.sInfo('old passport, allocate server[' + lastLoginServer + ']');
-            }
-
-            pck.serverId = lastLoginServer;
-            pck.gmAuth = session.gmAuth;
-
-            session.authed = true;
-            session.save(e => {
-                if (e) {
-                    reject(e);
-                }
-                else {
-                    resolve(pck);
-                }
+        if (result.length === 0) {
+            let dbTime = await LoginDB.getDBTime();
+            let insertSql = "insert into passport_info set ?";
+            result = await LoginDB.conn.execute(insertSql, {
+                passport: packet.passport,
+                platform: packet.platform,
+                auth_type: 2,
+                pwd: '',
+                mail: '',
+                uid: packet.deviceUid,
+                token: packet.deviceToken,
+                create_time: dbTime,
+                gm_auth: 0,
+                reg_ip: ip,
+                reg_device: packet.device,
+                reg_device_type: packet.deviceType,
+                last_login_time: dbTime,
+                status: 0,
+                last_login_server: 0
             });
-        });
+            session.passportId = result['insertId'];
+            pck.isNew = 1;
+        }
+        else {
+            session.passportId = result[0]['passport_id'];
+            session.gmAuth = result[0]['gm_auth'];
+            lastLoginServer = result[0]['last_login_server'];
+            pck.isNew = 0;
+        }
+
+        session.device = packet.device;
+        session.ip = ip;
+
+        if (!lastLoginServer) {
+            let maxServerId = 0;
+            for (let key in LoginWorld.instance.serverMap) {
+                let server = LoginWorld.instance.serverMap[key];
+                if (!server.can_login || !server.alive) {
+                    continue;
+                }
+                if (!this.isServerAccess(server.login_strategy_id, session)) {
+                    continue;
+                }
+
+                if (maxServerId < server.server_id) {
+                    maxServerId = server.server_id;
+                }
+            }
+
+            if (maxServerId) {
+                lastLoginServer = maxServerId;
+                Log.sInfo('new passport, allocate server[' + lastLoginServer + ']');
+                let sql = 'update passport_info set ? where ?';
+                await LoginDB.conn.execute(sql, [{last_login_server: lastLoginServer}, {passport_id: session.passportId}]);
+            }
+        }
+        else {
+            Log.sInfo('old passport, allocate server[' + lastLoginServer + ']');
+        }
+
+        pck.serverId = lastLoginServer;
+        pck.gmAuth = session.gmAuth;
+
+        await RedisMgr.getInstance(RedisType.GAME).set(this.getLoginSessionKey(session.passportId), JSON.stringify(session));
+        await RedisMgr.getInstance(RedisType.GAME).expire(this.getLoginSessionKey(session.passportId), 120);
+        return pck;
     }
 
     @Post('/getServerList')
-    public async handleGetServerList(@Session() session: Express.Session) {
-        if (!session.authed) {
-            return 'need login first';
+    public async handleGetServerList(@Body() packet: CS_GET_SERVER_LIST,) {
+        let session: ILoginSession = JSON.parse(await RedisMgr.getInstance(RedisType.GAME).get(this.getLoginSessionKey(packet.passportId)));
+        if (!session) {
+            return '';
         }
 
         let ret = await LoginDB.conn.execute('select * from re_passport_player where ?', {passport_id: session.passportId});
@@ -231,46 +243,33 @@ export class LoginController {
     }
 
     @Post('/getInfo')
-    public handleGetInfo(@Body() packet: CS_GET_INFO, @Session() session: Express.Session) {
-        return new Promise(async (resolve, reject) => {
-            let platformId = packet.platformId,
-                clientVersion = packet.clientVersion,
-                notice = '',
-                reqVersion = LoginWorld.instance.getNoticeStr(LoginDB.NoticeUseType.PLATFORM_CLIENT_VERSION, LoginDB.NoticeConditionType.PLATFORM, platformId),
-                updateAddress = '';
+    public handleGetInfo(@Body() packet: CS_GET_INFO) {
+        let platformId = packet.platformId,
+            clientVersion = packet.clientVersion,
+            notice = '',
+            reqVersion = LoginWorld.instance.getNoticeStr(LoginDB.NoticeUseType.PLATFORM_CLIENT_VERSION, LoginDB.NoticeConditionType.PLATFORM, platformId),
+            updateAddress = '';
 
-            session.platformId = platformId;
-            session.clientVersion = clientVersion;
-
-            let pck = new SC_GET_INFO();
-            if (reqVersion !== '' && reqVersion !== clientVersion) {
-                updateAddress = LoginWorld.instance.getNoticeStr(LoginDB.NoticeUseType.UPDATE_ADDR, LoginDB.NoticeConditionType.PLATFORM, platformId);
-                pck.notice = '';
-                pck.version = reqVersion;
-                pck.updateAddress = updateAddress;
-            }
-            else {
-                notice = LoginWorld.instance.getNoticeStr(LoginDB.NoticeUseType.LOGIN, LoginDB.NoticeConditionType.PLATFORM, platformId);
-                pck.notice = notice;
-                pck.version = reqVersion;
-                pck.updateAddress = '';
-            }
-
-            session.save(e => {
-                if (e) {
-                    reject(e);
-                }
-                else {
-                    resolve(pck);
-                }
-            });
-        });
+        let pck = new SC_GET_INFO();
+        if (reqVersion !== '' && reqVersion !== clientVersion) {
+            updateAddress = LoginWorld.instance.getNoticeStr(LoginDB.NoticeUseType.UPDATE_ADDR, LoginDB.NoticeConditionType.PLATFORM, platformId);
+            pck.notice = '';
+            pck.version = reqVersion;
+            pck.updateAddress = updateAddress;
+        }
+        else {
+            notice = LoginWorld.instance.getNoticeStr(LoginDB.NoticeUseType.LOGIN, LoginDB.NoticeConditionType.PLATFORM, platformId);
+            pck.notice = notice;
+            pck.version = reqVersion;
+            pck.updateAddress = '';
+        }
     }
 
     @Post('/chooseServer')
-    public async handleChooseServer(@Body() packet: CS_CHOOSE_SERVER, @Session() session: Express.Session) {
-        if (!session.authed) {
-            return 'need login first';
+    public async handleChooseServer(@Body() packet: CS_CHOOSE_SERVER) {
+        let session: ILoginSession = JSON.parse(await RedisMgr.getInstance(RedisType.GAME).get('login_session_' + packet.passportId));
+        if (!session) {
+            return '';
         }
 
         let server = LoginWorld.instance.serverMap[packet.serverId];
