@@ -12,6 +12,7 @@ export class SC_LOGIN {
     public serverId: number;
     public gmAuth: number;
     public isNew: number;
+    public passportId: number;
 }
 
 export interface IServer {

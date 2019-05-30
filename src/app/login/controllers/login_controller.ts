@@ -124,7 +124,7 @@ export class LoginController {
     }
 
     @Post('/login')
-    public async handleLogin(@Body() packet: CS_LOGIN, @Req() req) {
+    public async handleLogin(@Body() packet: CS_LOGIN, @Req() req): Promise<SC_LOGIN> {
         let session: ILoginSession = {};
         let pck = new SC_LOGIN();
         let sql = 'select passport_id, gm_auth, last_login_server from passport_info where ? and ? and ?',
@@ -163,6 +163,7 @@ export class LoginController {
             pck.isNew = 0;
         }
 
+        pck.passportId = session.passportId;
         session.device = packet.device;
         session.ip = ip;
 
@@ -202,10 +203,11 @@ export class LoginController {
     }
 
     @Post('/getServerList')
-    public async handleGetServerList(@Body() packet: CS_GET_SERVER_LIST,) {
+    public async handleGetServerList(@Body() packet: CS_GET_SERVER_LIST): Promise<SC_GET_SERVER_LIST> {
         let session: ILoginSession = JSON.parse(await RedisMgr.getInstance(RedisType.GAME).get(this.getLoginSessionKey(packet.passportId)));
         if (!session) {
-            return '';
+            Log.sError(`session expired or no session, login first, passportId=${packet.passportId}`);
+            return null;
         }
 
         let ret = await LoginDB.conn.execute('select * from re_passport_player where ?', {passport_id: session.passportId});
@@ -214,7 +216,7 @@ export class LoginController {
             const info = ret[i];
             let reply = await LoginDB.conn.execute('select last_login_time, level from player_info where ?', {role_id: info.role_id});
             if (reply.length === 0) {
-                // Log.sError('data in re_passport_player, level not in role, roleId=' + info.role_id + ', passport_id=' + this.passportId);
+                Log.sError('data in re_passport_player, level not in role, roleId=' + info.role_id + ', passport_id=' + session.passportId);
                 continue;
             }
             data[info.server_id] = {
@@ -224,6 +226,7 @@ export class LoginController {
             };
         }
         let pck = new SC_GET_SERVER_LIST();
+        pck.servers = [];
         for (let obj in LoginWorld.instance.serverMap) {
             let server: LoginDB.Server = LoginWorld.instance.serverMap[obj];
             if (this.isServerAccess(server.login_strategy_id, session)) {
@@ -243,7 +246,7 @@ export class LoginController {
     }
 
     @Post('/getInfo')
-    public handleGetInfo(@Body() packet: CS_GET_INFO) {
+    public async handleGetInfo(@Body() packet: CS_GET_INFO): Promise<SC_GET_INFO> {
         let platformId = packet.platformId,
             clientVersion = packet.clientVersion,
             notice = '',
@@ -263,13 +266,16 @@ export class LoginController {
             pck.version = reqVersion;
             pck.updateAddress = '';
         }
+
+        return pck;
     }
 
     @Post('/chooseServer')
-    public async handleChooseServer(@Body() packet: CS_CHOOSE_SERVER) {
+    public async handleChooseServer(@Body() packet: CS_CHOOSE_SERVER): Promise<SC_CHOOSE_SERVER> {
         let session: ILoginSession = JSON.parse(await RedisMgr.getInstance(RedisType.GAME).get('login_session_' + packet.passportId));
         if (!session) {
-            return '';
+            Log.sError(`session expired or no session, login first, passportId=${packet.passportId}`);
+            return null;
         }
 
         let server = LoginWorld.instance.serverMap[packet.serverId];
@@ -305,6 +311,10 @@ export class LoginController {
             pck.serverId = server.server_id;
             pck.serverName = server.server_name;
             return pck;
+        }
+        else {
+            Log.sError(`no selected server, serverId=${packet.serverId}`);
+            return null;
         }
     }
 }

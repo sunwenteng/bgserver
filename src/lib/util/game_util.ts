@@ -58,7 +58,8 @@ export function addObject(left: any, right: any): void {
             }
             if (!left[key]) {
                 left[key] = right[key];
-            } else {
+            }
+            else {
                 left[key] += right[key];
             }
         }
@@ -91,7 +92,8 @@ export function lowerBound(search: number, length: number, getValue: (index: num
         value = getValue(mid);
         if (value >= search) {
             right = mid;
-        } else if (value < search) {
+        }
+        else if (value < search) {
             left = mid + 1;
         }
     }
@@ -113,7 +115,8 @@ export function upperBound(length: number, search: number, getValue: (index: num
         value = getValue(mid);
         if (value > search) {
             right = mid;
-        } else if (value <= search) {
+        }
+        else if (value <= search) {
             left = mid + 1;
         }
     }
@@ -376,7 +379,8 @@ export function fetchFileList(path: string, reg?: RegExp): string[] {
                 if (reg.test(fileName)) {
                     fileList.push(fileName);
                 }
-            } else {
+            }
+            else {
                 fileList.push(fileName);
             }
         }
@@ -414,11 +418,18 @@ export async function httpDownload(url, dest) {
  * @example: httpGet('http://10.1.1.156/test?cmd=redis',function(error,body){},'json')
  *      获取http://10.1.1.156/test?cmd=redis返回的结果并解析为json对象
  */
-export function httpGet(url: string, callback: (err, data) => void, dataType?: HTTP_RES_DATA_TYPE, timeout?: number) {
-    let options = {'url': url, 'form': null, 'timeout': timeout};
-    request.get(options, (error, response, body) => {
-        let result = parseHttpResBody(error, response, body, dataType);
-        return callback(result.error, result.data);
+export async function httpGet(url: string, dataType: HTTP_RES_DATA_TYPE = HTTP_RES_DATA_TYPE.JSON, timeout?: number) {
+    return new Promise((resolve, reject) => {
+        let options = {'url': url, 'form': null, 'timeout': timeout};
+        request.get(options, (error, response, body) => {
+            let result = parseHttpResBody(error, response, body, dataType);
+            if (error) {
+                reject(result.error);
+            }
+            else {
+                resolve(result.data);
+            }
+        });
     });
 }
 
@@ -427,11 +438,18 @@ export function httpGet(url: string, callback: (err, data) => void, dataType?: H
  * 比httpGet函数多了个form表单参数(Json对象)，其他参数参考httpGet
  * @example:
  */
-export function httpPost(url: string, form: any, callback: (err, data) => void, dataType?: HTTP_RES_DATA_TYPE, timeout?: number) {
-    let options = {'url': url, 'form': form, 'timeout': timeout};
-    request.post(options, (error, response, body) => {
-        let result = parseHttpResBody(error, response, body, dataType);
-        return callback(result.error, result.data);
+export async function httpPost(url: string, form: any, dataType: HTTP_RES_DATA_TYPE = HTTP_RES_DATA_TYPE.JSON, timeout?: number) {
+    return new Promise((resolve, reject) => {
+        let options = {'url': url, 'form': form, 'timeout': timeout};
+        request.post(options, (error, response, body) => {
+            let result = parseHttpResBody(error, response, body, dataType);
+            if (result.error) {
+                reject(result.error);
+            }
+            else {
+                resolve(result.data);
+            }
+        });
     });
 }
 
@@ -454,17 +472,20 @@ function parseHttpResBody(error: any, response: any, body: string, dataType: HTT
                     body = body.replace("\n", '');
                     let data = JSON.parse(body);
                     return {'error': 0, 'data': data};
-                } catch (e) {
+                }
+                catch (e) {
                     //TODO:json字符串解析为json对象失败，可能字符串中含有特殊编码字符
                     return {
                         'error': ERROR_CODE.COMMON.JSON_PARSE_ERROR,
                         'data': null
                     };
                 }
-            } else {
+            }
+            else {
                 return {'error': 0, 'data': body};
             }
-        } else {
+        }
+        else {
             return {'error': 0, 'data': body};
         }
     }
@@ -485,7 +506,8 @@ export function capitalize(str: string): string {
 export function mkdirpSync(dirName) {
     if (fs.existsSync(dirName)) {
         return true;
-    } else {
+    }
+    else {
         if (mkdirpSync(path.dirname(dirName))) {
             fs.mkdirSync(dirName);
             return true;
@@ -514,17 +536,22 @@ export function parseHttpParams(req: express.Request): { [key: string]: any } {
             args[key] = req.body[key];
         }
     }
-    // else if ( === 'string') {
-    //     let data = JSON.parse(req.body);
-    //     for (let key in data) {
-    //         if (typeof data[key] !== 'function') {
-    //             args[key] = data[key];
-    //         }
-    //     }
-    // }
+    else if (typeof req.body === 'string') {
+        try {
+            let data = JSON.parse(req.body);
+            for (let key in data) {
+                if (typeof data[key] !== 'function') {
+                    args[key] = data[key];
+                }
+            }
+        }
+        catch (e) {
+            Log.sError(`req.body cannot parse to json: ${req.body} `);
+        }
+    }
 
     let ipAddress = null;
-    if (req && typeof(req.headers['x-forwarded-for']) !== 'undefined') {
+    if (req && typeof (req.headers['x-forwarded-for']) !== 'undefined') {
         let forwardedIpsStr = req.headers['x-forwarded-for'].toString();
         let forwardedIps = forwardedIpsStr.split(',');
         ipAddress = forwardedIps[0];
@@ -547,7 +574,8 @@ export function charCodeLength(str: string): number {
     for (let i = 0; i < str.length; i++) {
         if (str.charCodeAt(i) > 127 || str.charCodeAt(i) === 94) {
             len += 2;
-        } else {
+        }
+        else {
             len++;
         }
     }
