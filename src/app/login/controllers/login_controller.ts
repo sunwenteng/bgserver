@@ -26,6 +26,8 @@ interface ILoginSession {
     ip?: string;
 }
 
+const LOGIN_SESSION_TTL = 120;
+
 @JsonController('/login')
 export class LoginController {
 
@@ -198,7 +200,7 @@ export class LoginController {
         pck.gmAuth = session.gmAuth;
 
         await RedisMgr.getInstance(RedisType.GAME).set(this.getLoginSessionKey(session.passportId), JSON.stringify(session));
-        await RedisMgr.getInstance(RedisType.GAME).expire(this.getLoginSessionKey(session.passportId), 120);
+        await RedisMgr.getInstance(RedisType.GAME).expire(this.getLoginSessionKey(session.passportId), LOGIN_SESSION_TTL);
         return pck;
     }
 
