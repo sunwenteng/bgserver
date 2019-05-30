@@ -16,8 +16,7 @@ import Timer = NodeJS.Timer;
 interface Rpc {
     msgId: number;
     msg: any;
-    cb: (err?, msg?) => void;
-    self: any;
+    cb: [(msg) => void, (error: Error) => void]; // resolve, reject
     ctime: number;
 }
 
@@ -140,7 +139,7 @@ export class RpcSession extends UserSession {
                             if (cur.element.msgId === rpc.reqMsgId) {
                                 bRpcProcessed = true;
                                 this._rpcList.deleteNode(cur);
-                                await cur.element.cb.apply(cur.element.self, [null, msg]);
+                                cur.element.cb[0](msg);
                                 break;
                             }
                             cur = cur.next;
@@ -161,7 +160,7 @@ export class RpcSession extends UserSession {
                     if ((now - cur.element.ctime) > 5 * SECOND) {
                         Log.sWarn(`rpc session ${this._name} timeout, msgId=${cur.element.msgId}, msgType=${cur.element.msg ? cur.element.msg.constructor.name : 'none'}`);
                         this._rpcList.deleteNode(cur);
-                        await cur.element.cb.apply(cur.element.self, [new Error(`rpc session ${this._name} timeout`), null]);
+                        cur.element.cb[1](new Error(`rpc session ${this._name} timeout`));
                     }
                     cur = cur.next;
                 }
@@ -190,25 +189,28 @@ export class RpcSession extends UserSession {
 
     /**
      * @param msg
-     * @param self
-     * @param cb => if null just send msg
-     * @param bInit
      */
-    rpc(msg: any, self?: any, cb ?: (err?, msg?) => void) {
-        if (this._state !== ESessionState.CONNECTED) {
-            cb(new Error(`rpc session ${this._name} not connected`));
-            return;
-        }
-        let msgId = this._reqMsgIdx[msg.constructor.name];
-        if (!msgId) {
-            throw new Error(`rpc session ${this._name} ${msg.constructor.name} not found`);
-        }
+    async rpc<T>(msg: any): Promise<T> {
+        return new Promise((resolve, reject) => {
+            if (this._state !== ESessionState.CONNECTED) {
+                reject(new Error(`rpc session ${this._name} not connected`));
+                return;
+            }
+            let msgId = this._reqMsgIdx[msg.constructor.name];
+            if (!msgId) {
+                reject(`rpc session ${this._name} ${msg.constructor.name} not found`);
+                return;
+            }
 
-        let rpc = this._rpcMetaMap[msgId];
-        Log.sDebug('rpc session %s msgId=%d, %s=%j', this._name, msgId, msg.constructor.name, msg);
-        this._socket.send(this.encode(msgId, rpc.reqEncoder, msg));
-        if (cb) {
-            this._rpcList.append({msgId: msgId, msg: msg, cb: cb, self: self, ctime: Date.now()});
-        }
+            let rpc = this._rpcMetaMap[msgId];
+            Log.sDebug('rpc session %s msgId=%d, %s=%j', this._name, msgId, msg.constructor.name, msg);
+            this._socket.send(this.encode(msgId, rpc.reqEncoder, msg));
+            this._rpcList.append({
+                msgId: msgId,
+                msg: msg,
+                cb: [resolve, reject],
+                ctime: Date.now()
+            });
+        });
     }
 }

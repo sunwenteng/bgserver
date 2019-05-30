@@ -9,7 +9,7 @@ import {
     SC_LOGIN
 } from "../app/login/dto/login";
 
-describe('httpPost', () => {
+describe('login_controller', () => {
 
     it('login', async () => {
         let msg = new CS_LOGIN();

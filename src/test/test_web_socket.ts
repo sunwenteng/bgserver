@@ -12,7 +12,7 @@ import {Hit} from "../app/game/schema_generated/cmd";
 
 let msgIdx = 0;
 
-describe('bg_util', () => {
+describe('web_socket', () => {
     function sendProto(socket, msgId, buffer) {
         let finalBuffer = new ByteBuffer();
         finalBuffer.LE(true);
