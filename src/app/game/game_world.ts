@@ -211,7 +211,7 @@ export class GameWorld extends events.EventEmitter {
                 this.delSession(t);
                 await cur.element.offline();
             }
-            else if (cur.element.socket.isSocketValid()) {
+            else if (cur.element.socket.isSocketValid() && !cur.element.isUpdating) {
                 promises.push(cur.element.update());
             }
             cur = cur.next;

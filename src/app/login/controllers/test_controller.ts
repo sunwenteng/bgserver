@@ -1,11 +1,10 @@
-import {Body, Get, JsonController, Post, Req, Session} from "routing-controllers";
-import * as uuid from 'uuid';
+import {Body, Get, JsonController, Post, Req} from "routing-controllers";
 import {CS_LOGIN, SC_LOGIN} from "../dto/login";
 
 @JsonController('/test')
 export class TestController {
     @Post('/uuid')
-    async uuid(@Body() packet: CS_LOGIN, @Session() session: Express.Session, @Req() req) {
+    async uuid(@Body() packet: CS_LOGIN, @Req() req) {
         console.log(packet.passport);
         let pck = new SC_LOGIN();
         pck.gmAuth = 1;

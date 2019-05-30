@@ -17,6 +17,7 @@ const MAX_PACKET_COUNT = 10000;
 export class GameSession extends UserSession {
     public role: Role = null;
     private _loginKey: number = 0;
+    public isUpdating: boolean = false;
 
     updatePlayerCharge: IntervalTimer = new IntervalTimer(1);
     updatePlayerAct: IntervalTimer = new IntervalTimer(1);
@@ -44,6 +45,7 @@ export class GameSession extends UserSession {
     }
 
     public async update() {
+        this.isUpdating = true;
         let rpc: IRpc = null,
             counter = 0,
             cur = this.rpcList.head,
@@ -83,6 +85,7 @@ export class GameSession extends UserSession {
                 });
             }
         }
+        this.isUpdating = false;
     }
 
     public addSessionToWorker(): void {
