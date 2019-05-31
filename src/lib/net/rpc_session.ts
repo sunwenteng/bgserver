@@ -189,8 +189,9 @@ export class RpcSession extends UserSession {
 
     /**
      * @param msg
+     * @param bWaitResponse
      */
-    async rpc<T>(msg: any): Promise<T> {
+    async rpc<T>(msg: any, bWaitResponse: boolean = true): Promise<T> {
         return new Promise((resolve, reject) => {
             if (this._state !== ESessionState.CONNECTED) {
                 reject(new Error(`rpc session ${this._name} not connected`));
@@ -205,12 +206,14 @@ export class RpcSession extends UserSession {
             let rpc = this._rpcMetaMap[msgId];
             Log.sDebug('rpc session %s msgId=%d, %s=%j', this._name, msgId, msg.constructor.name, msg);
             this._socket.send(this.encode(msgId, rpc.reqEncoder, msg));
-            this._rpcList.append({
-                msgId: msgId,
-                msg: msg,
-                cb: [resolve, reject],
-                ctime: Date.now()
-            });
+            if (bWaitResponse) {
+                this._rpcList.append({
+                    msgId: msgId,
+                    msg: msg,
+                    cb: [resolve, reject],
+                    ctime: Date.now()
+                });
+            }
         });
     }
 }
