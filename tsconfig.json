@@ -5,10 +5,13 @@
     "removeComments": true,
     "noEmitOnError" : true,
     "target": "es2017",
-    "sourceMap": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "incremental": true,
+    "tsBuildInfoFile": ".buildcache",
+    "inlineSourceMap": true,
+    "inlineSources": true
   },
   "include": [
     "src/**/*"

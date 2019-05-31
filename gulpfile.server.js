@@ -1,5 +1,4 @@
 const gulp = require('gulp');
-const $ = require('gulp-load-plugins')();
 const exec = require('child_process').exec;
 const fs = require('fs');
 const path = require("path");
@@ -94,31 +93,14 @@ export class ${nameArray[0]} {
     }
 });
 
-gulp.task('scripts_src', /*['svn_update_server'],*/ () => {
-    return gulp.src('src/**/*.ts')
-        .pipe($.sourcemaps.init({loadMaps: true}))
-        .pipe($.typescript({
-            noImplicitUseStrict: true,  // 增加这个是因为Log4js读取代码堆栈要用到arguments.callee这个strict mode下禁用了，后续如果有更好的方案可以替换
-            noImplicitAny: false,       // 使用any的时候编译出警告
-            removeComments: true,       // 不输出注释
-            noEmitOnError: true,        // 错误不生成js
-            target: "es2017",
-            module: "commonjs",
-            experimentalDecorators: true,
-            emitDecoratorMetadata: true,
-        })).js
-        .pipe($.sourcemaps.write({includeContent: false, sourceRoot: '/src'}))
-        .pipe(gulp.dest('dist/'));
-});
-
 gulp.task('svn_update_server', (cb) => {
     exec('svn revert -R ' + path.resolve('./src/config/data') + ' && svn up ' + path.resolve('./src/config/data'), () => {
         cb();
     });
 });
 
-gulp.task('compile', gulp.series('scripts_src', () => {
-    return gulp.src(['src/**/*.js', '!src/app/proto/cmd.client.js', 'src/**/*.json'])
+gulp.task('compile', gulp.series('svn_update_server', () => {
+    return gulp.src(['src/**/*.js', /*'!src/app/proto/cmd.client.js', */'src/**/*.json'])
         .pipe(gulp.dest('dist/'));
 }));
 
