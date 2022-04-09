@@ -52,7 +52,7 @@
     "express": "^4.16.3",
     "fs": "0.0.1-security",
     "long": "^4.0.0",
-    "moment": "^2.22.2",
+    "moment": "^2.29.2",
     "mysql": "^2.15.0",
     "protobufjs": "^6.8.6",
     "redis": "^2.8.0",
