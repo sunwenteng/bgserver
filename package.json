@@ -54,7 +54,7 @@
     "long": "^4.0.0",
     "moment": "^2.22.2",
     "mysql": "^2.15.0",
-    "protobufjs": "^6.8.6",
+    "protobufjs": "^6.11.3",
     "redis": "^2.8.0",
     "reflect-metadata": "^0.1.13",
     "request": "^2.87.0",
